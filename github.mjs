@@ -1,7 +1,7 @@
 import {projectPath,parseProject,applyEdit} from './model.mjs';
 const repo='/repos/KidaJo/personal-hq';
 export class GitHub {
-  constructor(token, transport=fetch){this.token=token;this.transport=transport;}
+  constructor(token, transport=(...args)=>globalThis.fetch(...args)){this.token=token;this.transport=transport;}
   async call(path,method='GET',body){
     const r=await this.transport('https://api.github.com'+path,{method,headers:{Authorization:`Bearer ${this.token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(20000)});
     if(!r.ok) throw Error(`GitHub request failed (${r.status}). Reconnect or retry; your drafts remain saved.`);
