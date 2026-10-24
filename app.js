@@ -1,3 +1,6 @@
+import {credentialStore} from './credentials.mjs';
+let storage;try{storage=localStorage;}catch{}
+const credentials=credentialStore(storage);
 import {GitHub} from './github.mjs';
 let github=null;
 const $=s=>document.querySelector(s), content=$('#content'), nav=$('#desktop-workspaces nav');
@@ -19,7 +22,7 @@ async function api(path,data){
 }
 function connectScreen(){
  $('#workspace-toggle').hidden=true;$('#connection-menu').hidden=true;$('#refresh').hidden=true;
- content.innerHTML=`<h2>Your projects, together.</h2><p>Use a fine-grained GitHub token limited to personal-hq, with Contents read and write permission.</p><label class="hq-field"><span>Repository access token</span><input id="token" type="password" autocomplete="off" spellcheck="false"></label><p class="hq-small">Kept in this page’s memory only. Reloading or disconnecting clears it. Never send it in chat.</p>${action('connect','Connect GitHub')}`;
+ content.innerHTML=`<div class="lf-connect"><p class="lf-eyebrow">YOUR PERSONAL WORKSPACE</p><h2>A little clarity.<br>A lot of possibility.</h2><p class="lf-lead">Your projects. Your progress. Together in Lifegress.</p><p class="hq-small">Connect with a GitHub token limited to personal-hq, with Contents read and write permission.</p><label class="hq-field"><span>Repository access token</span><input id="token" type="password" autocomplete="off" spellcheck="false"></label><label class="lf-remember"><input id="remember" type="checkbox">Remember on this device</label><p class="hq-small">Optional. Saves your token in this browser, not in Apple Keychain. Use only on your own device.</p>${action('connect','Connect GitHub')}${credentials.read()?action('forget-credential','Forget saved connection'):''}</div>`;
  nav.innerHTML='';$('#version').textContent='Not connected';
 }
 
@@ -60,7 +63,8 @@ content.addEventListener('click',e=>{
  if(b.dataset.category){chooseCategory(b.dataset.category);return;}
  if(b.dataset.project){run(async()=>{const path=b.dataset.project,p=projects.find(p=>p.path===path);message('Loading project…');if(!p.loaded)Object.assign(p,await github.project(base,path));selected=path;category=p.category;render();message('');});return;}
  const a=b.dataset.action;
- if(a==='connect')run(async()=>{const token=$('#token').value.trim();if(!token)throw Error('Enter your token.');github=new GitHub(token);$('#token').value='';try{workspaceHome=small.matches;message('Loading your workspaces…');b.textContent='Connecting…';await load();message('Connected to your private repository.');}catch(e){github=null;b.textContent='Connect GitHub';throw e;}});
+ if(a==='forget-credential'){if(credentials.forget()){github=null;connectScreen();message('Saved token removed.');}else message('Unable to remove saved token. Clear site data in browser settings.');}
+ if(a==='connect')run(async()=>{const token=$('#token').value.trim();if(!token)throw Error('Enter your token.');github=new GitHub(token);const remember=$('#remember').checked;$('#token').value='';try{workspaceHome=small.matches;message('Loading your workspaces…');b.textContent='Connecting…';await load();const stored=remember?credentials.remember(token):credentials.forget();message(stored?'Connected to your private repository.':'Connected for this visit. Browser storage could not be updated.');}catch(e){github=null;b.textContent='Connect GitHub';throw e;}});
  if(a==='back'){selected=null;render();}
  if(a==='review')renderReview();
  if(a==='discard'&&confirm('Discard all local drafts? GitHub will not change.')){drafts={};save();render();}
@@ -69,5 +73,7 @@ content.addEventListener('click',e=>{
  if(a==='publish')run(async()=>{if(!review)return;message('Publishing and verifying…');const r=await api('publish',{review:review.id,confirm:true});if(r.verified){drafts={};base=r.base;save();await load();message('Published and verified on GitHub.');}});
 });
 $('#refresh').onclick=()=>run(async()=>{message('Checking for updates…');await load();if(base===github.snapshot.base)message('Up to date.');});
-$('#logout').onclick=()=>run(async()=>{if(count()&&!confirm('Sign out? Drafts remain in this browser. Export them first on a shared device.'))return;github=null;review=null;projects=[];drafts={};selected=null;connectScreen();message('Disconnected. Saved drafts remain in this browser.');});
+$('#forget').onclick=()=>run(async()=>{if(!credentials.forget())throw Error('Could not clear browser storage. Clear site data in browser settings.');github=null;review=null;projects=[];drafts={};selected=null;connectScreen();message('Device forgotten. Your drafts were kept.');});
+$('#logout').onclick=()=>run(async()=>{if(count()&&!confirm('Sign out? Drafts remain in this browser. Export them first on a shared device.'))return;if(!credentials.forget())throw Error('Could not clear the saved token. Clear site data in browser settings.');github=null;review=null;projects=[];drafts={};selected=null;connectScreen();message('Disconnected and saved token removed. Drafts remain in this browser.');});
 connectScreen();
+run(async()=>{const token=credentials.read();if(!token)return;github=new GitHub(token);workspaceHome=small.matches;message('Connecting to your workspace…');try{await load();message('Connected.');}catch(e){github=null;if(e.status===401)credentials.forget();connectScreen();message(e.status===401?'Saved token expired or was revoked. Enter a new token.':'Could not reconnect. Your saved token is unchanged; reload to retry or enter a token.');}});
