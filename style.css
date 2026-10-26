@@ -66,3 +66,28 @@ body.modal-open{overflow:hidden}body.has-drafts{padding-bottom:110px}
 @media(prefers-reduced-motion:reduce){#workspace-dialog,#review-dialog{animation:none}}
 
 #workspace-dialog .hq-toolbar{position:sticky;top:-24px;background:var(--lf-card);z-index:2;padding:12px 0}#review-dialog .hq-change pre{font:inherit;white-space:pre-wrap}
+/* Mobile navigation: fixed header, two-line morph and downward reveal. */
+html,body{height:100%;overflow:hidden}body{box-sizing:border-box}body.has-drafts{padding-bottom:24px}
+#hq-manual{height:calc(100dvh - 48px);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+#hq-manual .hq-top{position:relative;top:auto;flex:0 0 auto}
+#page-scroll{flex:1;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-padding-top:16px}
+body.has-drafts #page-scroll{padding-bottom:110px}body.modal-open #page-scroll{overflow:hidden}
+#hq-manual .hq-layout,#hq-manual main,#hq-manual .hq-field{min-width:0;max-width:100%}
+#hq-manual .hq-task>span{min-width:0;overflow-wrap:anywhere}#hq-manual pre{max-width:100%;overflow-wrap:anywhere;white-space:pre-wrap}
+#hq-manual input[type=date]{-webkit-appearance:none;appearance:none;display:block;box-sizing:border-box;inline-size:100%;min-inline-size:0;max-inline-size:100%;width:100%;min-width:0;max-width:100%;font-size:16px;overflow:hidden}
+#hq-manual input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:left;max-width:100%}
+#hq-manual input[type=date]::-webkit-datetime-edit{min-width:0;padding:0}
+#hq-manual #workspace-toggle,.menu-toggle{background:transparent;border:0;border-radius:0;flex:0 0 44px;width:44px;height:44px;display:grid;place-items:center;padding:0;color:var(--lf-text)}
+.menu-lines{position:relative;display:block;width:20px;height:20px}.menu-lines>span{position:absolute;left:0;top:9px;width:20px;height:2px;background:currentColor;border-radius:2px;transition:transform .24s ease}
+.menu-lines>span:first-child{transform:translateY(-3px)}.menu-lines>span:last-child{transform:translateY(3px)}
+.menu-expanded .menu-lines>span:first-child{transform:rotate(45deg)}.menu-expanded .menu-lines>span:last-child{transform:rotate(-45deg)}
+#workspace-dialog{inset:0 0 0 auto;width:min(440px,100%);height:100dvh;max-height:100dvh;max-width:100%;margin:0;padding:0;overflow:hidden;background:transparent;animation:none;border:0;box-sizing:border-box}
+#workspace-dialog[open]{display:flex;flex-direction:column}#workspace-dialog .menu-header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:20px 24px;background:var(--lf-card)}
+#workspace-dialog .menu-brand{display:flex;align-items:center;gap:8px;font-size:24px;font-weight:650;letter-spacing:-.8px;border:0;padding:4px 0;min-height:44px;background:transparent;color:var(--lf-text)}.menu-brand img{border-radius:7px}
+#workspace-dialog #close-workspaces{padding:0;border-radius:0;background:transparent}
+#workspace-dialog .menu-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:8px 24px max(24px,env(safe-area-inset-bottom));background:var(--lf-card);clip-path:inset(0 0 100% 0);transition:clip-path .24s ease}
+#workspace-dialog.menu-expanded .menu-body{clip-path:inset(0)}
+#workspace-dialog .menu-body>button,#workspace-dialog .menu-body section button{display:block;width:100%;text-align:left}
+@media(max-width:720px){body,body.has-drafts{padding:0}#hq-manual{height:100dvh;min-height:0;border-radius:0}#hq-manual .hq-top,#workspace-dialog .menu-header{padding:14px max(16px,env(safe-area-inset-right)) 14px max(16px,env(safe-area-inset-left));padding-top:max(14px,env(safe-area-inset-top));gap:8px}#workspace-dialog{width:100%;inset:0}#workspace-dialog .menu-brand{font-size:22px}#hq-manual main{min-height:0}#page-scroll .hq-layout{min-height:calc(100% - 70px)}}
+@media(max-width:390px){#workspace-dialog .menu-brand{font-size:20px;gap:6px}.menu-brand img{width:28px;height:28px}#workspace-dialog .menu-header,#hq-manual .hq-top{gap:6px}}
+@media(prefers-reduced-motion:reduce){.menu-lines>span,#workspace-dialog .menu-body{transition:none}}

@@ -10,6 +10,10 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const groups=[['all','All Projects'],['commercial-photography','Commercial Photography'],['work','Marriott'],['apps','App Development'],['digital','Digital Assets'],['finance','Finance'],['business','Side Income'],['personal','Personal'],['career','Career'],['system','System']];
 let base='',projects=[],drafts={},csrf='',selected=null,category='all',review=null,busy=false;
 let reviewOrigin={scroll:0};
+const pageScroll=()=>$('#page-scroll');
+const scrollPage=top=>pageScroll().scrollTo({top,behavior:'instant'});
+let menuClosing=false;
+function closeMenu(){const dialog=$('#workspace-dialog');if(!dialog.open||menuClosing)return;menuClosing=true;dialog.classList.remove('menu-expanded');$('#workspace-toggle').setAttribute('aria-expanded','false');setTimeout(()=>{dialog.close();menuClosing=false;},matchMedia('(prefers-reduced-motion: reduce)').matches?0:240);}
 let workspaceHome=true; const small=matchMedia('(max-width: 720px)');
 const key='lifegress:KidaJo/personal-hq:drafts:v1';
 function message(text){$('#hq-message').textContent=text;$('#review-message').textContent=text;}
@@ -34,7 +38,7 @@ function connectScreen(){
 }
 
 function action(name,label,disabled=false){return `<button class="hq-action" data-action="${name}" ${disabled?'disabled':''}>${label}</button>`;}
-function goHome(){if(busy)return;selected=null;category='all';workspaceHome=true;$('#workspace-dialog').close();$('#connection-menu').open=false;if(github)render();else connectScreen();window.scrollTo(0,0);}
+function goHome(){if(busy)return;selected=null;category='all';workspaceHome=true;closeMenu();$('#connection-menu').open=false;if(github)render();else connectScreen();scrollPage(0);}
 function breadcrumbs(project){const label=esc(groups.find(g=>g[0]===category)?.[1]||'Projects');return `<nav class="hq-breadcrumbs" aria-label="Breadcrumb"><button data-action="home">Home</button><span aria-hidden="true">/</span>${project?`<button data-category="${esc(category)}">${label}</button><span aria-hidden="true">/</span><span aria-current="page">${esc(project.name)}</span>`:`<span aria-current="page">${label}</span>`}</nav>`;}
 $('#home').onclick=goHome;
 function render(){
@@ -63,33 +67,34 @@ async function load(){
 async function run(fn){if(busy)return;busy=true;$('#hq-manual').setAttribute('aria-busy','true');$('#close-review').disabled=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn();}catch(e){if(e.status===401){rememberPreference=rememberPreference||!!credentials.read();const removed=credentials.forget();github=null;$('#workspace-dialog').close();connectScreen();message('Your token is invalid, expired, or revoked. Enter a new token to reconnect. Your drafts are kept.'+(removed?'':' Browser storage could not be cleared.'));}else message(e.message);}finally{busy=false;$('#hq-manual').setAttribute('aria-busy','false');document.querySelectorAll('button').forEach(b=>b.disabled=false);updateCount();}}
 content.addEventListener('input',e=>{if(e.target.id==='note'){draft().note=e.target.value;save();}if(e.target.id==='date'){draft().date=e.target.value;save();}});
 content.addEventListener('change',e=>{if(e.target.dataset.task){const id=e.target.dataset.task,p=projects.find(p=>p.path===selected);if(e.target.checked===p.tasks.find(t=>t.id===id).done)delete draft().tasks[id];else draft().tasks[id]=e.target.checked;save();}});
-function chooseCategory(id){listGeneration++;category=id;selected=null;workspaceHome=false;$('#workspace-dialog').close();$('#workspace-toggle').setAttribute('aria-expanded','false');render();window.scrollTo(0,0);}
+function chooseCategory(id){listGeneration++;category=id;selected=null;workspaceHome=false;closeMenu();$('#workspace-toggle').setAttribute('aria-expanded','false');render();scrollPage(0);}
 for(const node of [nav,$('#mobile-workspaces')])node.addEventListener('click',e=>{const b=e.target.closest('[data-category]');if(b&&!busy)chooseCategory(b.dataset.category);});
-$('#workspace-toggle').onclick=()=>{$('#workspace-dialog').showModal();document.body.classList.add('modal-open');$('#workspace-toggle').setAttribute('aria-expanded','true');};
-$('#close-workspaces').onclick=()=>$('#workspace-dialog').close();
-$('#workspace-dialog').addEventListener('close',()=>{$('#workspace-toggle').setAttribute('aria-expanded','false');$('#workspace-toggle').focus();document.body.classList.remove('modal-open');});
+$('#workspace-toggle').onclick=()=>{const dialog=$('#workspace-dialog');dialog.showModal();document.body.classList.add('modal-open');$('#workspace-toggle').setAttribute('aria-expanded','true');requestAnimationFrame(()=>requestAnimationFrame(()=>dialog.classList.add('menu-expanded')));};
+$('#close-workspaces').onclick=()=>closeMenu();
+$('#workspace-dialog').addEventListener('cancel',e=>{e.preventDefault();closeMenu();});
+$('#workspace-dialog').addEventListener('close',()=>{$('#workspace-dialog').classList.remove('menu-expanded');$('#workspace-toggle').setAttribute('aria-expanded','false');$('#workspace-toggle').focus();document.body.classList.remove('modal-open');});
 $('#close-review').onclick=()=>$('#review-dialog').close();
 $('#review-dialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
-$('#review-dialog').addEventListener('close',()=>{document.body.classList.remove('modal-open');requestAnimationFrame(()=>{window.scrollTo(0,reviewOrigin.scroll);if(!$('#draft-bar').hidden)$('#draft-bar button').focus({preventScroll:true});});});
+$('#review-dialog').addEventListener('close',()=>{document.body.classList.remove('modal-open');requestAnimationFrame(()=>{scrollPage(reviewOrigin.scroll);if(!$('#draft-bar').hidden)$('#draft-bar button').focus({preventScroll:true});});});
 small.addEventListener('change',()=>{if(github&&!busy&&!review)render();});
 document.addEventListener('click',e=>{
  const b=e.target.closest('button');if(!b||busy)return;
  if(b.closest('#mobile-workspaces,#desktop-workspaces'))return;
  if(b.dataset.category){chooseCategory(b.dataset.category);return;}
- if(b.dataset.project){run(async()=>{const path=b.dataset.project,p=projects.find(p=>p.path===path);message('Loading project…');if(!p.loaded)Object.assign(p,await github.project(base,path));selected=path;category=p.category;render();window.scrollTo(0,0);message('');});return;}
+ if(b.dataset.project){run(async()=>{const path=b.dataset.project,p=projects.find(p=>p.path===path);message('Loading project…');if(!p.loaded)Object.assign(p,await github.project(base,path));selected=path;category=p.category;render();scrollPage(0);message('');});return;}
  const a=b.dataset.action;
  if(a==='home'){goHome();return;}
  if(a==='forget-credential'){if(credentials.forget()){github=null;rememberPreference=false;connectScreen();message('Saved token removed.');}else message('Unable to remove saved token. Clear site data in browser settings.');}
  if(a==='connect')run(async()=>{const token=$('#token').value.trim();if(!token)throw Error('Enter your token.');github=new GitHub(token);const remember=$('#remember').checked;rememberPreference=remember;$('#token').value='';try{workspaceHome=true;message('Loading your workspaces…');b.textContent='Connecting…';await load();const stored=remember?credentials.remember(token):credentials.forget();message(stored?'Connected to your private repository.':'Connected for this visit. Browser storage could not be updated.');}catch(e){github=null;b.textContent='Connect GitHub';throw e;}});
  if(a==='back')$('#review-dialog').close();
- if(a==='review'){reviewOrigin={scroll:window.scrollY};$('#review-message').textContent='';renderReview();$('#review-dialog').showModal();document.body.classList.add('modal-open');}
+ if(a==='review'){reviewOrigin={scroll:pageScroll().scrollTop};$('#review-message').textContent='';renderReview();$('#review-dialog').showModal();document.body.classList.add('modal-open');}
  if(a==='discard'&&confirm('Discard all local drafts? GitHub will not change.')){drafts={};save();$('#review-dialog').close();render();}
  if(a==='export'){const url=URL.createObjectURL(new Blob([JSON.stringify({base,drafts},null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='lifegress-drafts.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  if(a==='compare')run(async()=>{message('Comparing with GitHub…');review=await api('compare',{base,drafts});$('#review-content').innerHTML=`<h3>Ready to publish</h3><p>Only the reviewed changes below will be published.</p>${[...$('#review-content').querySelectorAll('.hq-change')].map(el=>el.outerHTML).join('')}${review.changes.map(c=>`<h3>${esc(projects.find(p=>p.path===c.path)?.name||c.path)}</h3><details><summary>Before</summary><pre>${esc(c.before)}</pre></details><details><summary>After</summary><pre>${esc(c.after)}</pre></details>`).join('')}<div class="hq-bar">${action('publish','Approve & Publish')}${action('back','Keep Editing')}</div>`;message('Comparison complete. Nothing published.');const heading=$('#review-content h3');heading.tabIndex=-1;heading.focus();});
  if(a==='publish')run(async()=>{if(!review)return;message('Publishing and verifying…');const r=await api('publish',{review:review.id,confirm:true});if(r.verified){drafts={};base=r.base;save();$('#review-dialog').close();await load();message('Published and verified on GitHub.');}});
 });
-$('#refresh').onclick=()=>{$('#workspace-dialog').close();return run(async()=>{message('Checking for updates…');await load();if(base===github.snapshot.base)message('Up to date.');});};
-$('#forget').onclick=()=>run(async()=>{if(!credentials.forget())throw Error('Could not clear browser storage. Clear site data in browser settings.');github=null;rememberPreference=false;review=null;projects=[];drafts={};selected=null;$('#workspace-dialog').close();connectScreen();message('Device forgotten. Your drafts were kept.');});
-$('#logout').onclick=()=>run(async()=>{if(count()&&!confirm('Sign out? Drafts remain in this browser. Export them first on a shared device.'))return;if(!credentials.forget())throw Error('Could not clear the saved token. Clear site data in browser settings.');github=null;rememberPreference=false;review=null;projects=[];drafts={};selected=null;$('#workspace-dialog').close();connectScreen();message('Disconnected and saved token removed. Drafts remain in this browser.');});
+$('#refresh').onclick=()=>{closeMenu();return run(async()=>{message('Checking for updates…');await load();if(base===github.snapshot.base)message('Up to date.');});};
+$('#forget').onclick=()=>run(async()=>{if(!credentials.forget())throw Error('Could not clear browser storage. Clear site data in browser settings.');github=null;rememberPreference=false;review=null;projects=[];drafts={};selected=null;closeMenu();connectScreen();message('Device forgotten. Your drafts were kept.');});
+$('#logout').onclick=()=>run(async()=>{if(count()&&!confirm('Sign out? Drafts remain in this browser. Export them first on a shared device.'))return;if(!credentials.forget())throw Error('Could not clear the saved token. Clear site data in browser settings.');github=null;rememberPreference=false;review=null;projects=[];drafts={};selected=null;closeMenu();connectScreen();message('Disconnected and saved token removed. Drafts remain in this browser.');});
 connectScreen();
 run(async()=>{const token=credentials.read();if(!token)return;rememberPreference=true;github=new GitHub(token);workspaceHome=true;message('Connecting to your workspace…');try{await load();message('Connected.');}catch(e){github=null;if(e.status===401)throw e;connectScreen();message('Could not reconnect. Your saved token is unchanged; reload to retry or enter a token.');}});
