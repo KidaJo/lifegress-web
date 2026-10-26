@@ -41,3 +41,28 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px soli
 #hq-manual a{text-decoration:underline;color:var(--lf-action)}
 .hq-error{color:var(--lf-error)}
 @media(forced-colors:active){#hq-manual button,#workspace-dialog button{border:1px solid ButtonText}#hq-manual button:disabled{color:GrayText;border-color:GrayText}}
+
+/* Narrow form controls: retain native date picker without intrinsic overflow. */
+#hq-manual .hq-field{min-width:0;max-width:100%}
+#hq-manual input[type=date]{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;min-height:48px}
+#hq-manual input[type=date]::-webkit-date-and-time-value{text-align:left;min-width:0}
+/* UX iteration: global menu, contextual review and quiet project states. */
+[hidden]{display:none!important}
+#hq-manual #workspace-toggle{display:inline-flex;margin-left:auto;align-items:center;justify-content:center;width:44px;height:44px;padding:10px;border-radius:50%}
+#workspace-dialog{position:fixed;inset:0 0 0 auto;margin:0;width:min(440px,100vw);max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;padding:24px;padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom));overflow:auto;animation:menu-in .22s ease-out}
+#workspace-dialog h3{font-size:12px;color:var(--lf-helper);text-transform:uppercase;letter-spacing:.08em;margin:28px 0 8px}
+#workspace-dialog>button,#workspace-dialog section button{display:block;width:100%;text-align:left;color:var(--lf-text)}
+#workspace-dialog #connection-menu{margin:0;position:static}#workspace-dialog p{color:var(--lf-helper);font-size:13px}
+#workspace-dialog button:hover{background:var(--lf-selected)}
+body.modal-open{overflow:hidden}body.has-drafts{padding-bottom:110px}
+#draft-bar{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:20px;width:max-content;max-width:calc(100% - 32px);padding:12px 16px;background:var(--lf-card);border:1px solid var(--lf-divider);border-radius:18px;box-shadow:0 8px 30px #214e3c22;font:14px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:var(--lf-secondary)}
+#draft-bar button,.review-top button,#review-dialog .hq-action{font:inherit;min-height:44px;border:0;border-radius:24px;padding:10px 18px;background:var(--lf-selected);color:var(--lf-action)}
+#draft-bar button,#review-dialog [data-action=compare],#review-dialog [data-action=publish]{background:var(--lf-action);color:white}
+#review-dialog{box-sizing:border-box;position:fixed;inset:auto 0 0;margin:0 auto;width:min(720px,100%);max-width:100%;max-height:90dvh;border:0;border-radius:24px 24px 0 0;padding:0 24px max(24px,env(safe-area-inset-bottom));background:var(--lf-card);color:var(--lf-text);font:15px/1.55 -apple-system,BlinkMacSystemFont,sans-serif;overflow:auto;animation:sheet-in .2s ease-out}
+#review-dialog::backdrop{background:#17221d66}.review-top{position:sticky;top:0;background:var(--lf-card);display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 0;border-bottom:1px solid var(--lf-divider);z-index:1}.review-top h2{font-size:22px;margin:0}#review-dialog .hq-change{background:var(--lf-page);padding:16px;border-radius:14px;margin:16px 0}#review-dialog .hq-bar{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0}#review-dialog .hq-draft-tools{margin-top:24px}#review-dialog button:disabled{opacity:.5}#review-message{color:var(--lf-secondary);overflow-wrap:anywhere}#review-dialog h3{overflow-wrap:anywhere}
+#hq-manual .hq-status{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;color:var(--lf-secondary)}#hq-manual .hq-status img{flex-shrink:0;opacity:.7}#hq-manual .state-active,#hq-manual .state-complete{color:var(--lf-action)}#hq-manual .state-attention{color:var(--lf-warning)}#hq-manual .hq-project-info{min-width:0}#hq-manual [data-summary]{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}#hq-manual .project-meta{font-size:12px;color:var(--lf-helper);margin:12px 0 24px}#hq-manual .hq-task small{display:block;margin-top:4px}
+@keyframes menu-in{from{transform:translateX(100%)}to{transform:translateX(0)}}@keyframes sheet-in{from{transform:translateY(30%);opacity:0}to{transform:translateY(0);opacity:1}}
+@media(max-width:720px){#workspace-dialog{width:100vw}#draft-bar{gap:10px;padding:10px 12px;font-size:12px}#draft-bar button{white-space:nowrap;padding:10px 14px}#hq-manual .hq-status{font-size:12px;max-width:38%}#review-dialog{padding-left:20px;padding-right:20px}}
+@media(prefers-reduced-motion:reduce){#workspace-dialog,#review-dialog{animation:none}}
+
+#workspace-dialog .hq-toolbar{position:sticky;top:-24px;background:var(--lf-card);z-index:2;padding:12px 0}#review-dialog .hq-change pre{font:inherit;white-space:pre-wrap}
