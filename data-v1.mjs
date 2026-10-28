@@ -130,6 +130,9 @@ export function transact(input,operations,options={}){
    if(e)fail('ID already exists');e={id:op.id,type:op.type,title:op.title,parent_id:op.parent_id??null,note:op.note||''};
    if(op.type==='task')e.status='Not Started';else e.children=[];
    m.entities[e.id]=e;m.paths[e.id]=recordPath(m,e.type,e.id,e.parent_id);insert(m,e,e.parent_id,op.position);addEvent(m,e.id,'created',{after:clone(e)},eventCtx);
+  }else if(op.kind==='reorder'&&op.id==null){
+   const old=m.index.children;if(!Array.isArray(op.ids)||new Set(op.ids).size!==old.length||op.ids.some(id=>!old.some(r=>r.id===id)))fail('Order must contain every top-level item once');
+   m.index.children=op.ids.map(id=>old.find(r=>r.id===id));addEvent(m,'index','reordered',{before:old.map(r=>r.id),after:op.ids},eventCtx,'standalone');
   }else{
    if(!e)fail('Unknown entity');
    if(op.kind==='edit'){

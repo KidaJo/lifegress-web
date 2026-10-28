@@ -36,3 +36,11 @@ test('a start from files saved on the device needs only the head check when GitH
  const h=harness();h.store.seed(b,saved);const data=await h.store.load();await h.store.active(data.base,data.model);
  assert.equal(h.calls.length,1);assert.ok(h.calls[0].p.endsWith('/git/ref/heads/main'));
 });
+
+test('top-level order (workspaces) can be changed and is recorded in History',()=>{
+ const m=transact(normalize({}),[{kind:'create',id:'A',type:'section',title:'A'},{kind:'create',id:'B',type:'section',title:'B'}],{recorded_at:'2026-01-01T00:00:00Z'});
+ const after=transact(m,[{kind:'reorder',id:null,ids:['B','A']}]);validate(after);
+ assert.deepEqual(after.index.children.map(r=>r.id),['B','A']);assert.match(after.files['index.md'],/"B"[\s\S]*"A"/);
+ const ev=decode(after.files['standalone/history/'+new Date().toISOString().slice(0,4)+'.md']).events.at(-1);assert.equal(ev.entity_id,'index');assert.equal(ev.event_type,'reordered');
+ assert.throws(()=>transact(m,[{kind:'reorder',id:null,ids:['A']}]),/every top-level/);
+});

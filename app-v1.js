@@ -1,9 +1,9 @@
 import {credentialStore} from './credentials.mjs';
-import {StoreV1} from './store-v1.mjs?v=025';
+import {StoreV1} from './store-v1.mjs?v=026';
 import {allowed,statuses,counts,transact,subtree,archived,decode,normalize,validate,eventContributor} from './data-v1.mjs';
 let storage;try{storage=localStorage;}catch{}
 // App version: V<major>.<release>. Increment the release part by one on every publication (see AGENTS.md).
-const APP_VERSION='V000.025';
+const APP_VERSION='V000.026';
 const credentials=credentialStore(storage),draftKey='lifegress:KidaJo/personal-hq:operations:v1',cacheKey='lifegress:KidaJo/personal-hq:cache:v1',avatarKey='lifegress:KidaJo/personal-hq:avatars:v1';
 const $=s=>document.querySelector(s),content=$('#content'),nav=$('#desktop-workspaces nav');
 $('#version').textContent=$('#menu-version').textContent=$('#side-version').textContent=APP_VERSION;
@@ -37,7 +37,7 @@ function closeMenu(){const d=$('#workspace-dialog');d.classList.remove('menu-exp
 // Loading shows the centered splash (logo, slogan, status) over the whole app until the workspace or login screen is ready.
 const splash=show=>{$('#splash').hidden=!show;};
 function loading(){splash(true);content.innerHTML='';nav.innerHTML='';$('#workspace-toggle').hidden=$('#header-profile').hidden=$('#header-search').hidden=true;$('#version').textContent=APP_VERSION;}
-function loggedOut(message=''){splash(false);$('#fab').hidden=true;content.innerHTML=`<div class="lf-connect"><p class="lf-eyebrow">YOUR PERSONAL WORKSPACE</p><h2>Your projects.<br>Your progress.</h2>${message?`<p class="lf-notice">${esc(message)}</p>`:''}<label class="hq-field">Access token<input id="token" type="password" autocomplete="off"></label><p class="hq-small">A GitHub access token that can read and update your private Lifegress data. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create a token</a></p>${personalDevice?'':`<label class="lf-remember"><input id="remember" type="checkbox" ${remember?'checked':''}>Remember on this device</label>`}<p class="hq-small" id="connect-help">Enter your access token to continue.</p><button class="hq-action" data-action="connect" aria-describedby="connect-help" disabled>Connect to Lifegress</button></div>`;nav.innerHTML='';$('#workspace-toggle').hidden=$('#header-profile').hidden=$('#header-search').hidden=true;$('#version').textContent=APP_VERSION;toast(null);}
+function loggedOut(message=''){splash(false);searchView=false;$('.hq-top').classList.remove('is-searching');$('#search-bar').hidden=true;$('#fab').hidden=true;content.innerHTML=`<div class="lf-connect"><p class="lf-eyebrow">YOUR PERSONAL WORKSPACE</p><h2>Your projects.<br>Your progress.</h2>${message?`<p class="lf-notice">${esc(message)}</p>`:''}<label class="hq-field">Access token<input id="token" type="password" autocomplete="off"></label><p class="hq-small">A GitHub access token that can read and update your private Lifegress data. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create a token</a></p>${personalDevice?'':`<label class="lf-remember"><input id="remember" type="checkbox" ${remember?'checked':''}>Remember on this device</label>`}<p class="hq-small" id="connect-help">Enter your access token to continue.</p><button class="hq-action" data-action="connect" aria-describedby="connect-help" disabled>Connect to Lifegress</button></div>`;nav.innerHTML='';$('#workspace-toggle').hidden=$('#header-profile').hidden=$('#header-search').hidden=true;$('#version').textContent=APP_VERSION;toast(null);}
 function expired(message='Your access has expired. Enter a new token to continue.'){credentials.forget();clearCache();store=null;model=view=null;$('#workspace-dialog').close();loggedOut(message);}
 async function run(fn){if(busy)return;busy=true;$('#hq-manual').setAttribute('aria-busy','true');try{await fn();}catch(e){if(e.status===401)expired();else say(e.message);}finally{busy=false;$('#hq-manual').setAttribute('aria-busy','false');}}
 const icon=name=>`<span class="lf-icon lf-icon-${name}" aria-hidden="true"></span>`;
@@ -95,7 +95,7 @@ function detail(e){
  const list=e.type==='task'?'':childGroups(e.children||[],allowed[e.type],editable);
  return `${back}${title}${crewNames(e.id)}${status}<div id="manage-content"></div>${editable?'':'<p>Archived · restore before editing</p>'}${props?`<div class="lf-props">${props}</div>`:''}${context}${list}${e.type==='task'&&editable?`<div class="lf-quiet-delete"><button data-action="delete">Delete task</button></div>`:''}<details class="lf-history" data-id="${esc(e.id)}"><summary>History</summary><div id="history-content"><p class="hq-small">Loading…</p></div></details>`;}
 // Actions on the record itself live in the ⋯ menu beside the title; Delete is last, red, and asks again.
-function actionsMenu(e){const arrange=[...(e.type!=='section'?[['move','Move to…']]:[]),...(e.children?.length>1?[['reorder','Reorder']]:[])],item=([a,l])=>`<button role="menuitem" data-action="${a}">${l}</button>`;
+function actionsMenu(e){const arrange=[...(e.type!=='section'?[['move','Move to…']]:[]),],item=([a,l])=>`<button role="menuitem" data-action="${a}">${l}</button>`;
  return `<div class="lf-actions">${iconButton('actions-menu','ellipsis','More actions','aria-haspopup="menu" aria-expanded="false"')}<div class="lf-menu" role="menu" hidden>${arrange.map(item).join('')}${arrange.length?'<hr>':''}${['section','project'].includes(e.type)?item(['archive','Archive']):''}<button role="menuitem" class="lf-danger" data-action="delete">Delete</button></div></div>`;}
 // Move picker: the workspace tree. Only valid parents can be chosen; the current place and the item's own branch are shown but disabled.
 function movePicker(id){const entity=view.entities[id],inside=new Set(subtree(view,id)),current=entity.parent_id??null;
@@ -124,19 +124,39 @@ async function loadHistory(id){model=await store.history(remoteBase,model,id);co
  box.innerHTML=list.map(e=>{const who=eventContributor(view,e),item=e.entity_id!==id?view.entities[e.entity_id]?.title:'';return `<article class="lf-event">${who?avatar(who):''}<div><p class="lf-event-what">${describe(e)}</p><p class="hq-small">${esc(member(who)?.name||e.actor||'')} · ${when(e.recorded_at)}${e.occurred_at?` · happened ${esc(showDate(e.occurred_at))}`:''}${item?` · ${esc(item)}`:''}${e.recorded_by?` · recorded by ${esc(e.recorded_by)}`:''}</p></div></article>`;}).join('')||'<p class="hq-small">No history yet.</p>';}
 // Containers and Tasks are listed in separate groups (Projects / Stages, then Tasks), each with its own add button,
 // so a Stage card never sits between Task checkboxes. Completed items go to the end of each group.
+// Collapsible groups (home): the header toggles the list; the choice is remembered on this device.
+let collapsedGroups=new Set();try{collapsedGroups=new Set(JSON.parse(storage?.getItem('lifegress:collapsed-groups:v1')||'[]'));}catch{}
+// Header: the title (tap to fold) on the left; on the right any group action (e.g. Reorder, hidden while folded),
+// then the item count (shown while folded) and the chevron. Title and chevron both toggle the group.
+function groupHead(key,title,count,extra=''){const closed=collapsedGroups.has(key);return `<div class="lf-list-head lf-collapsible${closed?' is-folded':''}" data-group-head="${key}"><button class="lf-group-toggle lf-group-title" data-action="toggle-group" data-group="${key}" aria-expanded="${!closed}"><h3>${title}</h3></button><span class="lf-group-extra">${extra}</span><button class="lf-group-toggle lf-group-end" data-action="toggle-group" data-group="${key}" aria-expanded="${!closed}" aria-label="${closed?'Show':'Hide'} ${title}" title="${closed?'Show':'Hide'}"><span class="lf-group-count">${count}</span>${icon('chevron-down')}</button></div>`;}
+function groupBody(key,html,cls=''){return `<div class="lf-group-body${collapsedGroups.has(key)?' is-collapsed':''}" data-group-body="${key}"><div class="hq-list${cls}">${html}</div></div>`;}
 const groupTitle={section:'Workspaces',project:'Projects',stage:'Stages',task:'Tasks'};
-function childGroups(refs,types,editable){const empty=!refs.some(r=>view.entities[r.id]);return types.map((type,i)=>{const items=refs.filter(r=>view.entities[r.id]?.type===type),done=r=>view.entities[r.id]?.type==='task'?view.entities[r.id].status==='Completed':counts(view,r.id).status==='Completed';if(!items.length)return empty&&i===types.length-1?'<p class="hq-small lf-empty">Nothing here yet. Use + to add something.</p>':'';
- return `<div class="lf-list-head"><h3>${groupTitle[type]}</h3></div><div class="hq-list">${[...items.filter(r=>!done(r)),...items.filter(done)].map(row).join('')}</div>`;}).join('');}
+function childGroups(refs,types,editable,collapse=''){const empty=!refs.some(r=>view.entities[r.id]);return types.map((type,i)=>{const items=refs.filter(r=>view.entities[r.id]?.type===type),done=r=>view.entities[r.id]?.type==='task'?view.entities[r.id].status==='Completed':counts(view,r.id).status==='Completed';if(!items.length)return empty&&i===types.length-1?'<p class="hq-small lf-empty">Nothing here yet. Use + to add something.</p>':'';
+ const open=items.filter(r=>!done(r)),closed=items.filter(done),sorting=reorderState?.type===type;
+ // Reorder lives on the group header; in reorder mode the same cards stay in place, checkboxes give way to drag handles.
+ const head=sorting?`<div class="lf-head-actions"><button class="lf-head-link" data-action="reorder-cancel">Cancel</button><button class="lf-add-chip lf-primary-chip" data-action="reorder-done">Done</button></div>`:editable&&open.length>1&&!reorderState?`<button class="lf-head-link" data-action="reorder" data-type="${type}">Reorder</button>`:'';
+ const list=sorting?reorderState.order.map(id=>`<div class="lf-reorder-item" data-id="${esc(id)}">${row({id})}<button class="lf-grip" data-id="${esc(id)}" aria-label="Move ${esc(view.entities[id].title)} (drag, or use arrow keys)" title="Drag to reorder">${icon('grip-vertical')}</button></div>`).join('')+closed.map(r=>`<div class="lf-reorder-fixed">${row(r)}</div>`).join(''):[...open,...closed].map(row).join('');
+ if(collapse){const key=`${collapse}-${type}`;if(sorting)collapsedGroups.delete(key);return groupHead(key,groupTitle[type],items.length,head)+groupBody(key,list,sorting?' lf-reordering':'');}
+ return `<div class="lf-list-head"><h3>${groupTitle[type]}</h3>${head}</div><div class="hq-list${sorting?' lf-reordering':''}">${list}</div>`;}).join('');}
 const isDone=id=>{const x=view.entities[id];return x?.type==='task'?x.status==='Completed':counts(view,id).status==='Completed';};
-// Reorder: drag the grip (or use the arrows) within each group; Done saves the whole new order once. Completed items stay at the end.
-let reorderState=null;
-function reorderPanel(){const e=view.entities[selected],groups=allowed[e.type].map(type=>({type,ids:reorderState.order.filter(x=>view.entities[x].type===type)})).filter(g=>g.ids.length);
- return `<h3>Reorder</h3><p class="hq-small">Drag to rearrange. Completed items stay at the end.</p>${groups.map(g=>`${groups.length>1?`<p class="lf-reorder-group">${groupTitle[g.type]}</p>`:''}<ol class="lf-reorder">${g.ids.map((x,i)=>`<li data-id="${esc(x)}"><span class="lf-grip" aria-hidden="true">${icon('grip-vertical')}</span><span class="lf-reorder-name">${esc(view.entities[x].title)}</span>${iconButton('reorder-step','chevron-up','Move up',`data-id="${esc(x)}" data-step="-1" ${i?'':'disabled'}`)}${iconButton('reorder-step','chevron-down','Move down',`data-id="${esc(x)}" data-step="1" ${i<g.ids.length-1?'':'disabled'}`)}</li>`).join('')}</ol>`).join('')}<div class="hq-bar lf-edit-actions"><button class="hq-action lf-primary" data-action="reorder-done">Done</button><button class="hq-action" data-action="cancel-move">Cancel</button></div>`;}
-let drag=null;
-content.addEventListener('pointerdown',e=>{const grip=e.target.closest('.lf-grip');if(!grip||!reorderState)return;e.preventDefault();const li=grip.closest('li');drag={li,list:li.parentElement};li.classList.add('is-dragging');grip.setPointerCapture(e.pointerId);});
-content.addEventListener('pointermove',e=>{if(!drag)return;const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('.lf-reorder li');if(!over||over===drag.li||over.parentElement!==drag.list)return;const r=over.getBoundingClientRect();drag.list.insertBefore(drag.li,e.clientY<r.top+r.height/2?over:over.nextSibling);});
-for(const type of ['pointerup','pointercancel'])content.addEventListener(type,()=>{if(!drag)return;drag.li.classList.remove('is-dragging');const moved=[...drag.list.children].map(li=>li.dataset.id),slots=reorderState.order.map((x,i)=>moved.includes(x)?i:-1).filter(i=>i>=0);slots.forEach((slot,k)=>{reorderState.order[slot]=moved[k];});drag=null;content.querySelector('#manage-content').innerHTML=reorderPanel();});
-// Search across active projects, stages, tasks and notes; each result shows where it lives.
+function showResults(){const box=$('#search-results');if(!box)return;box.innerHTML=searchResults(searchText);highlight(box,searchText.trim());$('#search-clear').hidden=!searchText;}
+// Highlight every match of the query in result titles and details (case-insensitive), without touching the HTML structure.
+function highlight(root,q){if(!q)return;const needle=q.toLowerCase(),walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('.hq-project-name,.hq-small')&&n.nodeValue.toLowerCase().includes(needle)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+ for(const node of nodes){const text=node.nodeValue,lower=text.toLowerCase(),frag=document.createDocumentFragment();let i=0,j;while((j=lower.indexOf(needle,i))>=0){frag.append(text.slice(i,j));const m=document.createElement('mark');m.className='lf-hit';m.textContent=text.slice(j,j+needle.length);frag.append(m);i=j+needle.length;}frag.append(text.slice(i));node.replaceWith(frag);}}
+let beforeSearch=null;
+const calm=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Opening: the field grows leftward out of the search icon while the icon glides to the far left; Cancel fades in.
+function enterSearch(){const from=$('#header-search').getBoundingClientRect();if(!searchView)beforeSearch={selected,profileView,archiveView};selected=null;archiveView=profileView=false;searchView=true;editing=null;closeMenu();render();scroll().scrollTo({top:0});const input=$('#search-input');input.value=searchText;input.focus();
+ if(calm()||!from.width)return;const field=$('.lf-search-field'),fr=field.getBoundingClientRect(),icon=field.querySelector('.lf-icon'),ir=icon.getBoundingClientRect(),start=Math.max(0,from.left-fr.left),ease='cubic-bezier(.2,.8,.2,1)';
+ field.animate([{clipPath:`inset(0 ${Math.max(0,fr.right-from.right)}px 0 ${start}px round 22px)`},{clipPath:'inset(0 0 0 0 round 12px)'}],{duration:320,easing:ease});
+ icon.animate([{transform:`translateX(${from.left+from.width/2-(ir.left+ir.width/2)}px)`},{transform:'none'}],{duration:320,easing:ease});
+ $('#search-cancel').animate([{opacity:0,transform:'translateX(12px)'},{opacity:1,transform:'none'}],{duration:240,delay:120,easing:ease,fill:'backwards'});}
+// Closing plays the reverse: the field shrinks back into the icon on the right, then the normal top bar returns.
+let exiting=false;
+function exitSearch(){if(!searchView||exiting)return;if(calm())return leaveSearch();exiting=true;const field=$('.lf-search-field'),fr=field.getBoundingClientRect(),icon=field.querySelector('.lf-icon'),ir=icon.getBoundingClientRect(),ease='cubic-bezier(.4,0,.6,1)';
+ $('#search-cancel').animate([{opacity:1},{opacity:0}],{duration:140,fill:'forwards'});icon.animate([{transform:'none'},{transform:`translateX(${fr.right-22-(ir.left+ir.width/2)}px)`}],{duration:260,easing:ease,fill:'forwards'});
+ field.animate([{clipPath:'inset(0 0 0 0 round 12px)'},{clipPath:`inset(0 0 0 ${fr.width-44}px round 22px)`}],{duration:260,easing:ease,fill:'forwards'}).finished.then(()=>{exiting=false;field.getAnimations().forEach(a=>a.cancel());icon.getAnimations().forEach(a=>a.cancel());$('#search-cancel').getAnimations().forEach(a=>a.cancel());leaveSearch();});}
+function leaveSearch(){searchView=false;searchText='';$('#search-input').value='';const b=beforeSearch||{};beforeSearch=null;selected=b.selected??null;profileView=!!b.profileView;archiveView=!!b.archiveView;render();}
 function searchResults(text){const q=text.trim().toLowerCase();if(!q)return '<p class="hq-small">Search by title or note.</p>';
  const hits=Object.values(view.entities).filter(e=>!archived(view,e.id)&&`${e.title}\n${e.note||''}`.toLowerCase().includes(q)).sort((a,b)=>Number(!a.title.toLowerCase().includes(q))-Number(!b.title.toLowerCase().includes(q))).slice(0,50);
  return hits.length?`<div class="hq-list">${hits.map(e=>e.type==='task'?taskRow(e):row({id:e.id})).join('')}</div>`:'<p class="hq-small">No matches.</p>';}
@@ -150,7 +170,7 @@ addEventListener('offline',()=>toast('offline',null,'You’re offline. Changes a
 addEventListener('online',()=>{toast(null);if(store&&ops.length)scheduleSync();});
 // Floating +: one place to add things. Items follow the hierarchy of the page you are on and name the destination,
 // e.g. "Task in PETHWAY", so it is always clear where a new item lands.
-function fabItems(){if(profileView||archiveView||searchView||!view)return [];const e=view.entities[selected];
+function fabItems(){if(profileView||archiveView||searchView||reorderState||!view)return [];const e=view.entities[selected];
  if(!e)return [['task','Task','Standalone, not in a project'],['project','Project','In a workspace you choose'],['section','Workspace','New top-level area']];
  const host=e.type==='task'?view.entities[e.parent_id]:e;if(archived(view,(host||e).id))return [];
  if(!host)return [['task','Task','Standalone, not in a project']];
@@ -160,12 +180,35 @@ function renderFab(){const items=fabItems(),fab=$('#fab');fab.hidden=!store||!vi
  $('#fab-menu').innerHTML=items.map(([type,label,hint])=>`<button role="menuitem" data-action="new" data-type="${type}">${icon('plus')}<span><strong>${label}</strong><small>${esc(hint)}</small></span></button>`).join('');}
 // Closing plays the reverse animation before the menu is hidden.
 function closeFab(){const m=$('#fab-menu'),f=$('#fab');if(m.hidden||f.classList.contains('is-closing'))return;f.classList.remove('is-open');f.classList.add('is-closing');$('#fab-button').setAttribute('aria-expanded','false');setTimeout(()=>{m.hidden=true;f.classList.remove('is-closing');},matchMedia('(prefers-reduced-motion: reduce)').matches?0:170);}
-document.body.insertAdjacentHTML('beforeend',`<div id="fab" class="lf-fab-wrap" hidden><div class="lf-fab-scrim" aria-hidden="true"></div><div id="fab-menu" class="lf-fab-menu" role="menu" hidden></div><button id="fab-button" class="lf-fab" aria-label="Add" title="Add" aria-haspopup="menu" aria-expanded="false"><span class="lf-icon lf-icon-plus" aria-hidden="true"></span></button></div>`);
+document.body.insertAdjacentHTML('beforeend',`<div id="fab" class="lf-fab-wrap" hidden><div class="lf-fab-scrim" aria-hidden="true"></div><div id="fab-menu" class="lf-fab-menu" role="menu" hidden></div><button id="fab-button" class="lf-fab" aria-label="Add" title="Add" aria-haspopup="menu" aria-expanded="false"><span class="lf-icon lf-icon-plus lf-fab-plus" aria-hidden="true"></span><span class="lf-icon lf-icon-x lf-fab-x" aria-hidden="true"></span></button></div>`);
 $('#fab-button').onclick=()=>{const m=$('#fab-menu');if(!m.hidden){closeFab();return;}m.hidden=false;$('#fab').classList.remove('is-closing');$('#fab').classList.add('is-open');$('#fab-button').setAttribute('aria-expanded','true');[...m.children].forEach((b,i)=>b.style.setProperty('--i',m.children.length-1-i));};
-document.addEventListener('pointerdown',e=>{if(!e.target.closest('#fab-button,#fab-menu'))closeFab();});
+// A tap outside the open menu only closes it: the click that follows is swallowed so nothing underneath (e.g. Add note) runs.
+let fabSwallowUntil=0;
+document.addEventListener('pointerdown',e=>{if(e.target.closest('#fab-button,#fab-menu')||$('#fab-menu').hidden)return;fabSwallowUntil=Date.now()+700;closeFab();},true);
+document.addEventListener('click',e=>{if(Date.now()<fabSwallowUntil&&!e.target.closest('#fab-button,#fab-menu')){fabSwallowUntil=0;e.preventDefault();e.stopImmediatePropagation();}},true);
 document.addEventListener('click',e=>{if(!e.target.closest('#fab-button'))closeFab();});
 document.querySelector('.lf-fab-scrim').onclick=closeFab;
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeFab();});
+$('#search-input').addEventListener('input',e=>{searchText=e.target.value;showResults();});
+$('#search-input').addEventListener('keydown',e=>{if(e.key==='Escape')exitSearch();if(e.key==='Enter')e.target.blur();});
+$('#search-clear').onclick=()=>{searchText='';$('#search-input').value='';showResults();$('#search-input').focus();};
+$('#search-cancel').onclick=exitSearch;
+// Reorder state: which group is being sorted and its unfinished items in their new order. Done saves once; Cancel discards.
+let reorderState=null,drag=null;
+const kidsOf=()=>(selected?view.entities[selected].children:view.index.children)||[];
+function finishReorder(save){const st=reorderState;reorderState=null;if(!save||!st){render();return;}const old=kidsOf().map(r=>r.id);let k=0;const ids=old.map(x=>view.entities[x]?.type===st.type&&!isDone(x)?st.order[k++]:x);if(ids.join()===old.join()){render();return;}run(()=>apply({kind:'reorder',id:selected??null,ids}));}
+// Drag: the held card follows the pointer; when its centre passes a neighbour's centre they swap places,
+// and the neighbours slide to their new spots (FLIP) instead of jumping. On release the card settles into its slot.
+function slide(list,move){const items=[...list.querySelectorAll('.lf-reorder-item')],before=new Map(items.map(x=>[x,x.offsetTop]));move();
+ for(const x of items){if(x===drag?.item)continue;const d=before.get(x)-x.offsetTop;if(d)x.animate([{transform:`translateY(${d}px)`},{transform:'none'}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'});}}
+content.addEventListener('pointerdown',e=>{const grip=e.target.closest('.lf-grip');if(!grip||!reorderState)return;e.preventDefault();const item=grip.closest('.lf-reorder-item');drag={item,list:item.parentElement,y:e.clientY,top:item.offsetTop};item.classList.add('is-dragging');grip.setPointerCapture(e.pointerId);});
+content.addEventListener('pointermove',e=>{if(!drag)return;const {item,list}=drag,shift=()=>e.clientY-drag.y-(item.offsetTop-drag.top);
+ const centre=item.offsetTop+shift()+item.offsetHeight/2,mid=x=>x.offsetTop+x.offsetHeight/2,prev=item.previousElementSibling,next=item.nextElementSibling;
+ if(prev?.matches('.lf-reorder-item')&&centre<mid(prev))slide(list,()=>list.insertBefore(item,prev));
+ else if(next?.matches('.lf-reorder-item')&&centre>mid(next))slide(list,()=>list.insertBefore(item,next.nextSibling));
+ item.style.translate=`0 ${shift()}px`;});
+for(const type of ['pointerup','pointercancel'])content.addEventListener(type,()=>{if(!drag)return;const {item,list}=drag;item.classList.remove('is-dragging');item.style.translate='';reorderState.order=[...list.querySelectorAll('.lf-reorder-item')].map(x=>x.dataset.id);drag=null;});
+content.addEventListener('keydown',e=>{const grip=e.target.closest?.('.lf-grip');if(!grip||!reorderState||!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const o=reorderState.order,i=o.indexOf(grip.dataset.id),j=i+(e.key==='ArrowUp'?-1:1);if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]];render();content.querySelector(`.lf-grip[data-id="${CSS.escape(grip.dataset.id)}"]`)?.focus();});
 function photoButton(id,label){return `<label class="lf-add lf-file">${icon('plus')}<span>${label}</span><input type="file" accept="image/*" data-avatar-for="${esc(id)}"></label>`;}
 function profile(){const me=member('owner')||{id:'owner',name:'Owner'},count=id=>Object.values(view.entities).filter(e=>(e.contributors||[]).includes(id)).length;
  const name=editing==='owner-name'?`<input class="lf-title-input" data-edit="name" value="${esc(me.name)}" aria-label="Your name">${editActions()}`:`<div class="lf-name-row"><h3>${esc(me.name)}</h3>${iconButton('edit','pencil','Edit name','data-edit="owner-name"')}</div>`;
@@ -181,18 +224,20 @@ function render(){
  // Navigation tree: "All projects" is the root and opens the home page; workspaces are indented under it; Archive stays apart.
  nav.innerHTML=`<button class="lf-nav-root" data-action="home" aria-pressed="${home}">All projects</button>`+sections.map(r=>`<button class="lf-nav-child" data-open="${esc(r.id)}" aria-pressed="${activeSection?.id===r.id}">${esc(view.entities[r.id]?.title||r.id)}</button>`).join('')+`<button class="lf-nav-archive" data-action="archive-list" aria-pressed="${archiveView}">Archive</button>`;$('#mobile-workspaces').innerHTML=nav.innerHTML;
  const e=view.entities[selected];
- if(searchView){content.innerHTML=`<h2>Search</h2><input id="search-input" class="lf-search-input" type="search" placeholder="Projects, tasks, notes" aria-label="Search" value="${esc(searchText)}" autocomplete="off"><div id="search-results">${searchResults(searchText)}</div>`;$('#search-input').focus();return;}
+ // Search mode: the top bar becomes the search field; results update as you type.
+ $('.hq-top').classList.toggle('is-searching',searchView);$('#search-bar').hidden=!searchView;
+ if(searchView){content.innerHTML='<div id="search-results"></div>';showResults();return;}
  if(profileView)content.innerHTML=profile();
  else if(archiveView){content.innerHTML=`<h2>Archive</h2><p class="hq-small">Archived items are kept with their history and don't count toward progress.</p><div class="hq-list">${view.catalog.entries.map(a=>`<div class="hq-project lf-card lf-archived"><span class="hq-project-info"><span class="hq-project-name">${esc(a.title||a.id)}</span><span class="hq-small">${esc(a.type[0].toUpperCase()+a.type.slice(1))}</span></span><span class="lf-head-actions"><button class="lf-add-chip" data-action="restore" data-id="${esc(a.id)}">Restore</button><button class="lf-add-chip lf-danger-chip" data-action="delete" data-id="${esc(a.id)}">Delete</button></span></div>`).join('')||'<p class="hq-small">Nothing archived.</p>'}</div><div id="manage-content"></div>`;return;}
  // Home keeps the Now / Up next list it opened with, so a Task checked here stays visible until the next visit.
- else if(!e){homeList??=focus();const pick=ids=>ids.map(id=>view.entities[id]).filter(x=>x&&!archived(view,x.id));const group=(title,list)=>list.length?`<section class="lf-focus"><h3>${title}</h3><div class="hq-list">${list.map(x=>taskRow(x)).join('')}</div></section>`:'';content.innerHTML=`<div class="lf-page-head"><h2>All projects</h2></div>${group('Now',pick(homeList.now))}${group('Up next',pick(homeList.next))}${childGroups(view.index.children,['section','task'],false)}`;}
+ else if(!e){homeList??=focus();const pick=ids=>ids.map(id=>view.entities[id]).filter(x=>x&&!archived(view,x.id));const group=(key,title,list)=>list.length?`<section class="lf-focus">${groupHead(key,title,list.length)}${groupBody(key,list.map(x=>taskRow(x)).join(''))}</section>`:'';content.innerHTML=`<div class="lf-page-head"><h2>All projects</h2></div>${group('home-now','Now',pick(homeList.now))}${group('home-next','Up next',pick(homeList.next))}${childGroups(view.index.children,['section','task'],true,'home')}`;}
  else content.innerHTML=detail(e);
  const input=content.querySelector('[data-edit]:not(button):not([type=date])');if(input){input.focus({preventScroll:true});if(input.tagName==='INPUT'&&input.type==='text')input.select();}
 }
 function preview(){view=ops.length?transact(model,ops):structuredClone(model);render();}
 async function load(){const data=await store.load();base=remoteBase=data.base;if(!syncing){ops=draftOps().filter(o=>!(o.kind==='crew'&&o.avatar&&!assets.some(a=>a.path===o.avatar)));locked=0;}model=await store.active(base,data.model);if(ops.some(structural))model=await store.archives(base,model,true);homeList=null;try{preview();}catch{ops=[];save();preview();}saveCache();loadAvatars();if(ops.length)await scheduleSync();}
 async function loadAvatars(){const need=[...new Set(view.crew.members.map(c=>c.avatar).filter(p=>p&&!avatars[p]))];if(!need.length)return;await Promise.all(need.map(async p=>{try{avatars[p]=await store.avatar(remoteBase,p);}catch{}}));const keep={};for(const c of view.crew.members)if(c.avatar&&avatars[c.avatar])keep[c.avatar]=avatars[c.avatar];avatars=keep;if(remember)try{storage.setItem(avatarKey,JSON.stringify(avatars));}catch{}render();}
-async function open(id){selected=id;editing=null;archiveView=profileView=searchView=false;homeList=null;closeMenu();if(model.entities[id])model=await store.branch(remoteBase,model,id);preview();scroll().scrollTo({top:0});}
+async function open(id){selected=id;editing=null;reorderState=null;archiveView=profileView=searchView=false;homeList=null;closeMenu();if(model.entities[id])model=await store.branch(remoteBase,model,id);preview();scroll().scrollTo({top:0});}
 // Stage a change locally and redraw at once. Only ops that are not already being sent can be merged.
 function stage(op){const sent=ops.slice(0,locked);let rest=[...ops.slice(locked),op];
  if(op.kind==='edit'){
@@ -255,7 +300,7 @@ const editingValue=()=>editing==='owner-name'?member('owner')?.name||'':editing?
 const enableSave=e=>{const save=content.querySelector('[data-action=save-edit]');if(save)save.disabled=e.target.value===editingValue()||e.target.tagName==='INPUT'&&!e.target.value.trim();const clear=content.querySelector('[data-action=clear-picked]');if(clear&&e.target.type==='date')clear.hidden=!e.target.value;};
 content.addEventListener('change',e=>{if(e.target.dataset.edit==='date')enableSave(e);});
 content.addEventListener('input',e=>{if(e.target.dataset.edit==='date')enableSave(e);});
-content.addEventListener('input',e=>{if(e.target.id==='search-input'){searchText=e.target.value;$('#search-results').innerHTML=searchResults(searchText);return;}if(e.target.dataset.edit&&!(e.target instanceof HTMLButtonElement)){const save=content.querySelector('[data-action=save-edit]');if(save)save.disabled=e.target.value===editingValue()||e.target.tagName==='INPUT'&&!e.target.value.trim();}if(e.target.id==='token')content.querySelector('[data-action=connect]').disabled=!e.target.value.trim();});
+content.addEventListener('input',e=>{if(e.target.dataset.edit&&!(e.target instanceof HTMLButtonElement)){const save=content.querySelector('[data-action=save-edit]');if(save)save.disabled=e.target.value===editingValue()||e.target.tagName==='INPUT'&&!e.target.value.trim();}if(e.target.id==='token')content.querySelector('[data-action=connect]').disabled=!e.target.value.trim();});
 content.addEventListener('toggle',e=>{if(e.target.classList?.contains('lf-history')&&e.target.open)run(()=>loadHistory(e.target.dataset.id));},true);
 content.addEventListener('keydown',e=>{if(e.key==='Escape')closeActions();if(e.key==='Enter'&&e.target.id==='token'&&e.target.value.trim())content.querySelector('[data-action=connect]').click();if(e.target.dataset?.edit&&!(e.target instanceof HTMLButtonElement)){if(e.key==='Escape'){editing=null;render();}else if(e.key==='Enter'&&(e.target.tagName==='INPUT'||e.metaKey||e.ctrlKey)){e.preventDefault();content.querySelector('[data-action=save-edit]:not(:disabled)')?.click();}}});
 document.addEventListener('click',event=>{if(!event.target.closest('.lf-actions'))closeActions();const b=event.target.closest('button');if(!b)return;const a=b.dataset.action,id=b.dataset.id||selected;
@@ -267,8 +312,8 @@ document.addEventListener('click',event=>{if(!event.target.closest('.lf-actions'
  if(a==='actions-menu'){const m=b.parentElement.querySelector('.lf-menu');m.hidden=!m.hidden;b.setAttribute('aria-expanded',String(!m.hidden));return;}
  if(b.closest('.lf-menu'))closeActions();
  if(busy)return;if(b.dataset.open){run(()=>open(b.dataset.open));return;}
- if(a==='home'){selected=null;archiveView=profileView=searchView=false;homeList=null;editing=null;closeMenu();render();scroll().scrollTo({top:0});}
- if(a==='search'){selected=null;archiveView=profileView=false;searchView=true;editing=null;closeMenu();render();scroll().scrollTo({top:0});}
+ if(a==='home'){reorderState=null;selected=null;archiveView=profileView=searchView=false;homeList=null;editing=null;closeMenu();render();scroll().scrollTo({top:0});}
+ if(a==='search'){enterSearch();return;}
  if(a==='profile'){selected=null;archiveView=searchView=false;profileView=true;editing=null;closeMenu();render();scroll().scrollTo({top:0});}
  if(a==='connect')run(async()=>{const token=$('#token').value.trim();if(!token)return;remember=personalDevice||$('#remember').checked;loading();store=new StoreV1(token);try{await load();}catch(e){store=null;loggedOut(e.status===401?'That token didn’t work. Check it and try again.':'Unable to connect. Try again.');return;}if(remember)credentials.remember(token);else{credentials.forget();clearCache();}say('');});
  if(a==='new')run(async()=>{const type=b.dataset.type,places=placesFor(type);let here=selected;while(here&&!places.some(o=>o.value===here))here=view.entities[here]?.parent_id??null;const answer=await ask({title:`New ${type}`,input:`${type[0].toUpperCase()+type.slice(1)} name`,confirm:'Create',places,place:here??places[0]?.value??''});if(!answer?.text)return;const newId=type.toUpperCase()+'-'+crypto.randomUUID();await queue({kind:'create',type,id:newId,title:answer.text,parent_id:answer.place||null});if(view.entities[newId])await open(newId);scheduleSync();});
@@ -279,11 +324,12 @@ document.addEventListener('click',event=>{if(!event.target.closest('.lf-actions'
  if(a==='delete')run(()=>deleteEntity(id));
  if(a==='move')run(async()=>{model=await store.active(base,model);preview();content.querySelector('#manage-content').innerHTML=movePicker(id);content.querySelector('#manage-content').scrollIntoView({block:'nearest'});});
  if(a==='pick-dest'){for(const x of content.querySelectorAll('.lf-tree button'))x.setAttribute('aria-pressed',String(x===b));const go=content.querySelector('[data-action=apply-move]');go.disabled=false;go.dataset.dest=b.dataset.dest;}
- if(a==='cancel-move'){reorderState=null;content.querySelector('#manage-content').innerHTML='';}
+ if(a==='cancel-move'){content.querySelector('#manage-content').innerHTML='';}
  if(a==='apply-move')run(()=>apply({kind:'move',id,parent_id:b.dataset.dest||null}));
- if(a==='reorder'){const e=view.entities[id];reorderState={order:(e.children||[]).map(r=>r.id).filter(x=>view.entities[x]&&!isDone(x))};content.querySelector('#manage-content').innerHTML=reorderPanel();}
- if(a==='reorder-step'){const order=reorderState.order,i=order.indexOf(b.dataset.id),type=view.entities[b.dataset.id].type;let j=i+Number(b.dataset.step);while(j>=0&&j<order.length&&view.entities[order[j]].type!==type)j+=Number(b.dataset.step);if(j>=0&&j<order.length){[order[i],order[j]]=[order[j],order[i]];content.querySelector('#manage-content').innerHTML=reorderPanel();content.querySelector(`.lf-reorder [data-id="${CSS.escape(b.dataset.id)}"][data-step="${b.dataset.step}"]`)?.focus();}}
- if(a==='reorder-done'){const e=view.entities[selected],ids=[...reorderState.order,...(e.children||[]).map(r=>r.id).filter(x=>!reorderState.order.includes(x))];reorderState=null;content.querySelector('#manage-content').innerHTML='';const before=(e.children||[]).map(r=>r.id).filter(x=>ids.includes(x)&&!isDone(x)),moved=allowed[e.type].some(type=>{const of=list=>list.filter(x=>view.entities[x]?.type===type).join();return of(ids.filter(x=>!isDone(x)))!==of(before);});if(moved)run(()=>apply({kind:'reorder',id:selected,ids}));}
+ if(a==='reorder'){const type=b.dataset.type;reorderState={type,order:kidsOf().map(r=>r.id).filter(x=>view.entities[x]?.type===type&&!isDone(x))};render();}
+ if(a==='toggle-group'){const key=b.dataset.group,closed=!collapsedGroups.has(key);closed?collapsedGroups.add(key):collapsedGroups.delete(key);try{storage.setItem('lifegress:collapsed-groups:v1',JSON.stringify([...collapsedGroups]));}catch{}const head=content.querySelector(`[data-group-head="${key}"]`);head?.classList.toggle('is-folded',closed);head?.querySelectorAll('.lf-group-toggle').forEach(x=>x.setAttribute('aria-expanded',String(!closed)));const body=content.querySelector(`[data-group-body="${key}"]`);if(body){body.classList.toggle('is-collapsed',closed);body.classList.toggle('is-animating',!closed);body.ontransitionend=e=>{if(e.target===body&&e.propertyName==='grid-template-rows')body.classList.remove('is-animating');};}}
+ if(a==='reorder-cancel')finishReorder(false);
+ if(a==='reorder-done')finishReorder(true);
  if(a==='discard')run(async()=>{ops=[];locked=0;assets=[];save();toast(null);await load();});
  if(a==='edit'){editing=b.dataset.edit;render();}
  if(a==='cancel-edit'){editing=null;render();}

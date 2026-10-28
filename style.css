@@ -599,3 +599,97 @@ html body #page-scroll{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px
 html body #page-scroll{padding-bottom:0}
 html body #hq-manual main#content{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 html body #page-scroll .hq-bottom{display:none;border:0}
+
+/* Search mode: the top bar is only the search field (icon, input, clear) and Cancel. */
+#hq-manual .hq-top.is-searching>*:not(#search-bar){display:none!important}
+#hq-manual .lf-search-bar{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+#hq-manual .lf-search-bar[hidden]{display:none}
+#hq-manual .lf-search-field{flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 6px 0 12px;border-radius:12px;background:var(--lf-page);color:var(--lf-secondary);animation:lf-fade .18s ease-out}
+#hq-manual .lf-search-field:focus-within{box-shadow:0 0 0 2px var(--lf-focus)}
+#hq-manual .lf-search-field .lf-icon{flex:none;width:18px;height:18px}
+#hq-manual #search-input{flex:1;min-width:0;border:0;outline:0;background:transparent;padding:10px 0;color:var(--lf-text);font:inherit;font-size:16px}
+#hq-manual #search-clear{flex:none;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:50%;background:var(--lf-divider);color:var(--lf-text);padding:0;cursor:pointer}
+#hq-manual #search-clear[hidden]{display:none}
+#hq-manual #search-clear .lf-icon{width:14px;height:14px}
+#hq-manual #search-cancel{flex:none;min-height:44px;border:0;background:transparent;padding:0 4px;color:var(--lf-action);font:inherit;font-size:16px;cursor:pointer}
+/* Matched text in results. */
+#hq-manual mark.lf-hit{background:var(--lf-selected);color:var(--lf-action);font-weight:700;border-radius:3px;padding:0 1px}
+#hq-manual #search-results .hq-list{margin-top:4px}
+
+/* + button: a real × (Lucide x) replaces the + instead of rotating one icon, so it renders cleanly on iPhone. */
+.lf-fab{position:relative}
+.lf-fab .lf-fab-plus,.lf-fab .lf-fab-x{position:absolute;inset:0;margin:auto;width:26px;height:26px;transition:transform .28s cubic-bezier(.2,.9,.25,1.2),opacity .2s}
+.lf-fab .lf-fab-x{opacity:0;transform:rotate(-90deg) scale(.6)}
+.lf-fab-wrap.is-open .lf-fab .lf-fab-plus{opacity:0;transform:rotate(90deg) scale(.6)}
+.lf-fab-wrap.is-open .lf-fab .lf-fab-x{opacity:1;transform:none}
+.lf-fab-wrap.is-open .lf-fab .lf-icon{transform:none}
+
+/* Group header actions: a quiet text "Reorder"; in reorder mode, Cancel + Done. */
+#hq-manual .lf-head-link{min-height:36px;border:0;border-radius:18px;padding:6px 10px;background:transparent;color:var(--lf-action);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+#hq-manual .lf-head-link:hover{background:var(--lf-selected)}
+#hq-manual .lf-primary-chip{background:var(--lf-action);color:#fff}
+#hq-manual .lf-primary-chip:hover{background:var(--lf-hover)}
+
+/* Reorder mode: cards stay in place; the checkbox folds away, a drag handle slides in on the right; completed items are fixed. */
+#hq-manual .lf-reorder-item{position:relative;border-radius:18px;transition:box-shadow .15s,transform .15s}
+#hq-manual .lf-reorder-item>.hq-project{pointer-events:none;padding-right:56px}
+#hq-manual .lf-reordering .lf-check{animation:lf-fold .25s ease-out forwards}
+#hq-manual .lf-reordering .lf-task-open{padding-left:12px}
+#hq-manual .lf-reorder-item .lf-grip{position:absolute;right:8px;top:50%;display:grid;place-items:center;width:44px;height:44px;margin-top:-22px;border:0;border-radius:12px;background:transparent;color:var(--lf-secondary);cursor:grab;touch-action:none;animation:lf-grip-in .28s cubic-bezier(.2,.8,.2,1) both}
+#hq-manual .lf-reorder-item .lf-grip:focus-visible{outline:2px solid var(--lf-focus)}
+#hq-manual .lf-reorder-item.is-dragging{transform:scale(1.02);box-shadow:0 12px 28px #214e3c33;z-index:2}
+#hq-manual .lf-reorder-item.is-dragging .lf-grip{cursor:grabbing}
+#hq-manual .lf-reorder-fixed{opacity:.5;pointer-events:none}
+@keyframes lf-fold{to{width:0;opacity:0;margin:0;padding:0;overflow:hidden}}
+@keyframes lf-grip-in{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#hq-manual .lf-reordering .lf-check{animation:none;display:none}#hq-manual .lf-reorder-item .lf-grip{animation:none}}
+
+/* Collapsible groups: the whole title is the toggle; the list folds with a height + fade animation; a count shows while folded. */
+#hq-manual .lf-group-toggle{display:inline-flex;align-items:center;gap:8px;min-height:40px;margin-left:-6px;padding:4px 8px 4px 6px;border:0;border-radius:12px;background:transparent;color:var(--lf-text);font:inherit;cursor:pointer}
+#hq-manual .lf-group-toggle:hover{background:var(--lf-page)}
+#hq-manual .lf-group-toggle h3{margin:0}
+#hq-manual .lf-group-toggle .lf-icon{width:18px;height:18px;color:var(--lf-secondary);transition:transform .25s ease}
+#hq-manual .lf-group-toggle[aria-expanded=false] .lf-icon{transform:rotate(-90deg)}
+#hq-manual .lf-group-count{min-width:22px;padding:1px 7px;border-radius:11px;background:var(--lf-selected);color:var(--lf-action);font-size:12px;font-weight:600;text-align:center}
+#hq-manual .lf-group-count[hidden]{display:none}
+#hq-manual .lf-group-body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+#hq-manual .lf-group-body>.hq-list{min-height:0;overflow:hidden}
+#hq-manual .lf-group-body.is-collapsed{grid-template-rows:0fr;opacity:0}
+#hq-manual .lf-focus>.lf-list-head{margin-top:0}
+#hq-manual .lf-focus{margin-bottom:24px}
+@media(prefers-reduced-motion:reduce){#hq-manual .lf-group-body,#hq-manual .lf-group-toggle .lf-icon{transition:none}}
+
+/* No width jump when content grows past the screen: space for the scrollbar is always reserved. */
+html body #page-scroll{scrollbar-gutter:stable}
+
+/* Collapsible group header: title left; Reorder, count and chevron right. */
+#hq-manual .lf-collapsible{gap:4px}
+#hq-manual .lf-collapsible .lf-group-title{flex:1;justify-content:flex-start;margin-left:-6px}
+#hq-manual .lf-group-extra{display:flex;align-items:center;transition:opacity .2s}
+#hq-manual .lf-group-extra:empty{display:none}
+#hq-manual .lf-collapsible.is-folded .lf-group-extra{display:none}
+#hq-manual .lf-group-end{gap:6px;padding:4px 6px}
+#hq-manual .lf-group-end .lf-group-count{opacity:0;transform:scale(.7);transition:opacity .2s,transform .2s}
+#hq-manual .lf-collapsible.is-folded .lf-group-end .lf-group-count{opacity:1;transform:none}
+#hq-manual .lf-group-toggle .lf-group-count[hidden]{display:inline-block}
+
+/* Header hover: while folded the whole row is one target; while open only the chevron reacts (the title is plain text). */
+#hq-manual .lf-collapsible{margin-left:-8px;margin-right:-8px;padding:0 4px 0 8px;border-radius:12px;transition:background .15s}
+#hq-manual .lf-collapsible .lf-group-title{margin-left:0;padding-left:0}
+#hq-manual .lf-collapsible .lf-group-toggle:hover{background:transparent}
+#hq-manual .lf-collapsible.is-folded{cursor:pointer}
+#hq-manual .lf-collapsible.is-folded:hover{background:var(--lf-page)}
+#hq-manual .lf-collapsible:not(.is-folded) .lf-group-title{pointer-events:none;cursor:default}
+#hq-manual .lf-collapsible:not(.is-folded) .lf-group-end:hover{background:var(--lf-page)}
+#hq-manual .lf-collapsible:not(.is-folded) .lf-group-end .lf-group-count{display:none}
+#hq-manual .lf-collapsible .lf-group-end{padding:4px 8px}
+#hq-manual .lf-collapsible.is-folded .lf-group-end .lf-group-count{animation:lf-count-in .2s ease-out}
+@keyframes lf-count-in{from{opacity:0;transform:scale(.7)}}
+
+/* Lists only clip while folded or folding, so lifted cards keep their full shadow. */
+#hq-manual .lf-group-body>.hq-list{overflow:visible}
+#hq-manual .lf-group-body.is-collapsed>.hq-list,#hq-manual .lf-group-body.is-animating>.hq-list{overflow:hidden}
+
+/* Dragging: the held card follows the pointer without lag; on release it glides into place. */
+#hq-manual .lf-reorder-item{transition:box-shadow .15s,transform .15s,translate .22s cubic-bezier(.2,.8,.2,1)}
+#hq-manual .lf-reorder-item.is-dragging{transition:box-shadow .15s,transform .15s;z-index:3}
