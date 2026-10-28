@@ -123,7 +123,7 @@ body.has-drafts #page-scroll{padding-bottom:110px}body.modal-open #page-scroll{o
 #hq-manual .lf-check:hover{background:var(--lf-selected)}
 #hq-manual .lf-check img{width:22px;height:22px}
 #hq-manual .lf-task-open{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:0;background:transparent;padding:10px 8px;text-align:left;font:inherit;color:inherit;cursor:pointer}
-#hq-manual .lf-task-row.is-done .hq-project-name{color:var(--lf-secondary);text-decoration:line-through;text-decoration-color:var(--lf-divider)}
+#hq-manual .lf-task-row.is-done .hq-project-name{color:var(--lf-secondary);text-decoration:line-through;text-decoration-color:currentColor}
 
 /* Login, loading and edit actions. */
 #hq-manual .lf-loading{display:flex;align-items:center;gap:12px;color:var(--lf-secondary);min-height:40vh}
@@ -131,3 +131,46 @@ body.has-drafts #page-scroll{padding-bottom:110px}body.modal-open #page-scroll{o
 #hq-manual button.lf-primary:not(:disabled),#hq-manual button[data-action=connect]:not(:disabled){background:var(--lf-action);color:#fff}
 #hq-manual button.lf-primary:not(:disabled):hover,#hq-manual button[data-action=connect]:not(:disabled):hover{background:var(--lf-hover)}
 #hq-manual button[data-action=connect]:disabled,#hq-manual button.lf-primary:disabled,#hq-manual .lf-edit-actions button:disabled{background:var(--lf-disabled);color:var(--lf-disabled-text);opacity:1;cursor:default}
+
+/* Icons drawn with the surrounding text color. */
+.lf-icon{width:16px;height:16px;flex:none;background:currentColor;-webkit-mask:var(--lf-icon) center/contain no-repeat;mask:var(--lf-icon) center/contain no-repeat}
+.lf-icon-circle-check{--lf-icon:url(./icons/circle-check.svg)}
+.lf-icon-triangle-alert{--lf-icon:url(./icons/triangle-alert.svg)}
+.lf-icon-circle{--lf-icon:url(./icons/circle.svg)}
+.lf-icon-circle-dot{--lf-icon:url(./icons/circle-dot.svg)}
+.lf-icon-pencil{--lf-icon:url(./icons/pencil.svg)}
+.lf-icon-plus{--lf-icon:url(./icons/plus.svg)}
+.lf-icon-x{--lf-icon:url(./icons/x.svg)}
+.lf-icon-arrow-left{--lf-icon:url(./icons/arrow-left.svg)}
+
+/* Detail page: view mode with inline edits. */
+#hq-manual .lf-back{display:inline-flex;align-items:center;gap:6px;min-height:44px;border:0;background:transparent;padding:0;color:var(--lf-action);font:inherit;font-size:14px;cursor:pointer;max-width:100%}
+#hq-manual .lf-back span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hq-manual .lf-title-row{display:flex;align-items:flex-start;gap:8px}
+#hq-manual .lf-title-row h2,#hq-manual .lf-title-row h3{flex:1;min-width:0;overflow-wrap:anywhere}
+#hq-manual .lf-icon-button{flex:none;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:var(--lf-secondary);padding:0;cursor:pointer}
+#hq-manual .lf-icon-button:hover{background:var(--lf-selected);color:var(--lf-action)}
+#hq-manual .lf-icon-button .lf-icon{width:18px;height:18px}
+#hq-manual .lf-title-input,#hq-manual .lf-note textarea{display:block;width:100%;max-width:100%;border:1px solid var(--lf-input);border-radius:12px;padding:12px 14px;background:var(--lf-card);color:var(--lf-text);font:inherit}
+#hq-manual .lf-title-input{font-size:24px;font-weight:600;letter-spacing:-.4px}
+#hq-manual .lf-note textarea{min-height:120px;resize:vertical}
+#hq-manual .lf-inline-edit{margin:8px 0 16px}
+#hq-manual .lf-segmented{display:inline-flex;gap:4px;padding:4px;margin:8px 0 4px;border-radius:14px;background:var(--lf-page);max-width:100%}
+#hq-manual .lf-segmented button{display:inline-flex;align-items:center;gap:6px;min-height:40px;border:0;border-radius:10px;padding:8px 12px;background:transparent;color:var(--lf-secondary);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+#hq-manual .lf-segmented button[aria-pressed=true]{background:var(--lf-card);color:var(--lf-action);font-weight:600;box-shadow:0 1px 3px #214e3c1f}
+#hq-manual .lf-dates{margin:20px 0 8px;border-top:1px solid var(--lf-divider)}
+#hq-manual .lf-date-row{display:flex;align-items:center;gap:12px;min-height:52px;border-bottom:1px solid var(--lf-divider)}
+#hq-manual .lf-date-label{width:110px;flex:none;color:var(--lf-secondary);font-size:14px}
+#hq-manual .lf-date-value{position:relative;flex:1;display:inline-flex;align-items:center;gap:6px;min-height:44px;color:var(--lf-text)}
+#hq-manual label.lf-date-value{cursor:pointer}
+#hq-manual .lf-date-value.is-empty{color:var(--lf-action)}
+#hq-manual .lf-date-value input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+#hq-manual .lf-add-row{min-height:52px;display:flex;align-items:center;border-bottom:1px solid var(--lf-divider)}
+#hq-manual .lf-add-row .lf-date-value{flex:none;color:var(--lf-action);font-size:14px}
+#hq-manual .lf-add{display:inline-flex;align-items:center;gap:6px;min-height:44px;margin:12px 0;border:0;background:transparent;padding:0;color:var(--lf-action);font:inherit;font-size:14px;cursor:pointer}
+#hq-manual .lf-note,#hq-manual .lf-context{margin:20px 0}
+#hq-manual .lf-note h3,#hq-manual .lf-context>h3{font-size:15px;margin:0 0 8px;align-self:center}
+#hq-manual .lf-note p,#hq-manual .lf-context>p{white-space:pre-wrap;color:var(--lf-text);margin:0}
+#hq-manual .lf-context>p{color:var(--lf-secondary)}
+#hq-manual .lf-connect a{color:var(--lf-action)}
+@media(max-width:390px){#hq-manual .lf-segmented{display:flex}#hq-manual .lf-segmented button{flex:1;justify-content:center;padding:8px 6px;font-size:12px}#hq-manual .lf-date-label{width:90px}}
