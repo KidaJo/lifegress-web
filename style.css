@@ -375,3 +375,136 @@ html body #hq-message{position:absolute;width:1px;height:1px;margin:0;padding:0;
  #hq-manual .lf-header-profile:hover .lf-avatar,#hq-manual .lf-header-profile[aria-pressed=true] .lf-avatar{box-shadow:0 0 0 2px var(--lf-card),0 0 0 4px var(--lf-action)}
  #hq-manual .lf-header-profile:focus-visible{outline:2px solid var(--lf-focus);outline-offset:2px}
 }
+
+/* V000.024 — no pinch or double-tap zoom; 16px form text so iOS never zooms into a field. */
+html{touch-action:pan-x pan-y}
+#hq-manual input,#hq-manual textarea,#hq-manual select,.lf-ask input,.lf-crop input{font-size:16px}
+#hq-manual .lf-title-input{font-size:24px}
+
+/* Detail properties: no dividers; spacing only. Editors open below their row with a short animation. */
+#hq-manual .lf-props{border:0;margin:20px 0 0}
+#hq-manual .lf-prop{display:block;min-height:0;padding:0;border:0}
+#hq-manual .lf-prop-row{display:flex;align-items:center;gap:12px;min-height:44px}
+#hq-manual .lf-prop-note{padding:10px 0 0}
+#hq-manual .lf-prop-note>.lf-prop-label{display:block;margin:0 0 6px}
+#hq-manual .lf-prop-note .lf-prop-row{align-items:flex-start}
+#hq-manual .lf-prop-note .lf-prop-row .lf-prop-label{padding-top:12px}
+#hq-manual .lf-prop-note .lf-prop-row .lf-prop-value{padding:10px 0}
+#hq-manual button.lf-date-value{border:0;background:transparent;padding:0;font:inherit;color:var(--lf-text);cursor:pointer;min-height:44px;text-align:left}
+#hq-manual button.lf-date-value.is-empty{color:var(--lf-action)}
+#hq-manual .lf-expand{margin:4px 0 12px;padding:14px;border-radius:14px;background:var(--lf-page);animation:lf-expand .22s ease-out;transform-origin:top}
+#hq-manual .lf-expand .lf-edit-actions{margin-top:12px}
+#hq-manual .lf-expand textarea{display:block;width:100%;min-height:120px;resize:vertical;border:1px solid var(--lf-input);border-radius:12px;padding:12px 14px;background:var(--lf-card);color:var(--lf-text);font:inherit;font-size:16px}
+#hq-manual .lf-date-input{display:block;width:100%;min-height:48px;border:1px solid var(--lf-input);border-radius:12px;padding:10px 14px;background:var(--lf-card);color:var(--lf-text);font:inherit;font-size:16px}
+@keyframes lf-expand{from{opacity:0;transform:translateY(-6px) scaleY(.96)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#hq-manual .lf-expand,.lf-ask{animation:none}}
+
+/* In-app dialog (new item, archive, delete). */
+.lf-ask{width:min(380px,calc(100vw - 32px));border:0;border-radius:20px;padding:22px;background:var(--lf-card);color:var(--lf-text);box-shadow:0 20px 60px #214e3c40;font:15px/1.45 -apple-system,BlinkMacSystemFont,sans-serif;animation:lf-expand .18s ease-out}
+.lf-ask::backdrop{background:#1b2a2333}
+.lf-ask h2{margin:0 0 8px;font-size:19px;letter-spacing:-.3px}
+.lf-ask p{margin:0 0 16px;color:var(--lf-secondary)}
+.lf-ask input{display:block;width:100%;box-sizing:border-box;min-height:48px;margin:4px 0 18px;border:1px solid var(--lf-input);border-radius:12px;padding:10px 14px;font:inherit;font-size:16px;color:var(--lf-text)}
+.lf-ask input[hidden],.lf-ask p[hidden]{display:none}
+.lf-ask .hq-action{font:inherit;min-height:44px;border:0;border-radius:24px;padding:10px 18px;background:var(--lf-selected);color:var(--lf-action);cursor:pointer}
+.lf-ask .lf-primary{background:var(--lf-action);color:#fff}
+.lf-ask .lf-primary:disabled{background:var(--lf-disabled);color:var(--lf-disabled-text);cursor:default}
+.lf-ask .lf-danger-button{background:var(--lf-error);color:#fff}
+
+/* Readable History. */
+#hq-manual .lf-event{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--lf-divider)}
+#hq-manual .lf-event .lf-avatar{margin-top:2px}
+#hq-manual .lf-event-what{margin:0 0 2px;color:var(--lf-text)}
+#hq-manual .lf-event .hq-small{margin:0}
+
+/* Splash while loading: everything centered — logo, name, slogan, then the loading status. */
+.lf-splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:24px;background:var(--lf-card);color:var(--lf-text);font:15px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;text-align:center}
+.lf-splash[hidden]{display:none}
+.lf-splash-logo{width:120px;height:120px;border-radius:28px;box-shadow:0 8px 28px #214e3c1f}
+.lf-splash-name{margin:20px 0 0;font-size:28px;font-weight:700;letter-spacing:-.6px}
+.lf-splash-slogan{margin:6px 0 0;font-size:16px;color:var(--lf-secondary)}
+.lf-splash-status{display:flex;align-items:center;gap:10px;margin:40px 0 0;font-size:14px;color:var(--lf-secondary)}
+@media(prefers-reduced-motion:no-preference){.lf-splash-logo{animation:lf-breathe 2.4s ease-in-out infinite}}
+@keyframes lf-breathe{50%{transform:scale(1.04)}}
+
+/* Readable small text. */
+#hq-manual .hq-small{font-size:13px}
+
+/* Cards: tighter but still airy — 16px inside, 10px between cards, two short lines of detail. */
+#hq-manual .hq-list{gap:10px}
+#hq-manual .hq-project.lf-card{flex-direction:row;align-items:center;min-height:0;padding:16px 20px;gap:12px}
+#hq-manual .lf-card .hq-project-info{flex:1;min-width:0;gap:4px}
+#hq-manual .lf-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+#hq-manual .lf-card-top .hq-status{flex:none;font-size:13px;color:var(--lf-secondary)}
+#hq-manual .lf-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0}
+#hq-manual .lf-meta .hq-small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+#hq-manual .lf-meta .hq-status{font-size:13px}
+#hq-manual .lf-task-row{padding:4px 14px 4px 6px}
+#hq-manual .lf-task-open{padding:10px 4px;gap:10px}
+#hq-manual .lf-task-open .hq-project-info{flex:1;min-width:0;gap:3px}
+#hq-manual .lf-task-open>.lf-crew,#hq-manual .lf-card .lf-crew{margin-top:2px}
+#hq-manual .lf-task-open>.lf-crew{margin:0;flex:none;align-self:center}
+#hq-manual .lf-due{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--lf-secondary)}
+#hq-manual .lf-due .lf-icon{width:13px;height:13px}
+#hq-manual .lf-due.is-late{color:var(--lf-warning);font-weight:600}
+.lf-icon-calendar{--lf-icon:url(./icons/calendar.svg)}
+#hq-manual .lf-check{-webkit-touch-callout:none;user-select:none}
+
+/* Header: search icon (all widths), then profile photo (wide) or ☰ (phone). */
+.lf-icon-search{--lf-icon:url(./icons/search.svg)}
+#hq-manual .lf-header-icon:not([hidden]){display:grid;place-items:center;margin-left:auto;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--lf-text);cursor:pointer}
+#hq-manual .lf-header-icon .lf-icon{width:20px;height:20px}
+#hq-manual .lf-header-icon:hover,#hq-manual .lf-header-icon[aria-pressed=true]{background:var(--lf-selected);color:var(--lf-action)}
+@media(min-width:721px){#hq-manual .lf-header-profile:not([hidden]){margin-left:4px}}
+#hq-manual #workspace-toggle{margin-left:4px}
+#hq-manual .lf-search-input{display:block;width:100%;box-sizing:border-box;min-height:48px;margin:4px 0 20px;border:1px solid var(--lf-input);border-radius:14px;padding:10px 16px;background:var(--lf-card);color:var(--lf-text);font:inherit;font-size:16px}
+
+/* Archive cards. */
+#hq-manual .lf-archived{cursor:default}
+#hq-manual .lf-danger-chip{color:var(--lf-error);background:var(--lf-error-bg)}
+#hq-manual .lf-danger-chip:hover{background:var(--lf-error-bg);filter:brightness(.97)}
+
+/* Reorder panel. */
+.lf-icon-chevron-up{--lf-icon:url(./icons/chevron-up.svg)}
+.lf-icon-chevron-down{--lf-icon:url(./icons/chevron-down.svg)}
+.lf-icon-grip-vertical{--lf-icon:url(./icons/grip-vertical.svg)}
+#hq-manual .lf-reorder{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+#hq-manual .lf-reorder li{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 4px 0 6px;border-radius:12px;background:var(--lf-card);box-shadow:0 1px 2px #214e3c14}
+#hq-manual .lf-reorder li.is-dragging{box-shadow:0 8px 24px #214e3c33;opacity:.95}
+#hq-manual .lf-grip{display:grid;place-items:center;width:36px;height:44px;color:var(--lf-secondary);cursor:grab;touch-action:none}
+#hq-manual .lf-grip .lf-icon{width:18px;height:18px}
+#hq-manual .lf-reorder-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hq-manual .lf-reorder .lf-icon-button:disabled{opacity:.3;cursor:default}
+#hq-manual .lf-reorder-group{margin:8px 0 6px;font-size:13px;font-weight:600;color:var(--lf-secondary)}
+
+/* New item dialog: where it goes. */
+.lf-ask-place{display:flex;align-items:center;gap:10px;margin:0 0 18px}
+.lf-ask-place[hidden]{display:none}
+.lf-ask-place span{color:var(--lf-secondary)}
+.lf-ask-place select{flex:1;min-width:0;min-height:44px;border:1px solid var(--lf-input);border-radius:12px;padding:8px 10px;background:var(--lf-card);color:var(--lf-text);font:inherit;font-size:16px}
+
+/* Phones: the version moves from the footer into the ☰ menu. */
+.lf-menu-version{margin:24px 0 8px;font-size:12px;color:var(--lf-secondary);text-align:center}
+@media(max-width:720px){html body #page-scroll .hq-bottom{display:none}}
+@media(min-width:721px){.lf-menu-version{display:none}}
+
+/* Cards never grow wider than their list. */
+#hq-manual .hq-list>.hq-project{box-sizing:border-box;width:100%;max-width:100%;min-width:0}
+#hq-manual .lf-task-open,#hq-manual .lf-task-open .hq-project-info,#hq-manual .lf-card .hq-project-info{min-width:0}
+#hq-manual .lf-task-open{overflow:hidden}
+#hq-manual .lf-task-open .hq-project-name{overflow-wrap:anywhere}
+#hq-manual .hq-list{grid-template-columns:minmax(0,1fr)}
+#hq-manual .lf-meta .hq-status,#hq-manual .lf-due{flex:none;white-space:nowrap}
+
+/* Status colors (brand status pairs): Completed green, In Progress blue-gray, Not Started / no tasks neutral. */
+#hq-manual .hq-status.state-complete{color:var(--lf-success)}
+#hq-manual .hq-status.state-active{color:var(--lf-info)}
+#hq-manual .hq-status.state-neutral{color:var(--lf-secondary)}
+#hq-manual .lf-card-top .hq-status.state-complete,#hq-manual .lf-card-top .hq-status.state-active{font-weight:600}
+#hq-manual .lf-task-open>.hq-status{flex:none;align-self:center;white-space:nowrap;font-size:13px;font-weight:600}
+#hq-manual .lf-segmented button[aria-pressed=true][data-status="Completed"]{color:var(--lf-success)}
+#hq-manual .lf-segmented button[aria-pressed=true][data-status="In Progress"]{color:var(--lf-info)}
+#hq-manual .lf-segmented button[aria-pressed=true][data-status="Not Started"]{color:var(--lf-text)}
+/* Small helper text stays at 12px. */
+#hq-manual .hq-small{font-size:12px}
+#hq-manual .lf-card-top .hq-status{white-space:nowrap}
