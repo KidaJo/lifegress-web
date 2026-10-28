@@ -13,7 +13,17 @@ export class StoreV1 extends GitHub {
  }
  async tree(base){if(!this.treeCache.has(base)){const c=await this.call(repo+'/git/commits/'+base);const t=await this.call(repo+'/git/trees/'+c.tree.sha+'?recursive=1');if(t.truncated)throw Error('Truncated repository tree; no changes written');this.treeCache.set(base,{sha:c.tree.sha,entries:t.tree});}return this.treeCache.get(base);}
  async load(){const base=await this.head();const text=await this.read(base,'index.md',true);if(text===null)throw Error('This repository has not migrated to V1. Use the existing app until migration is verified.');const model=normalize({'index.md':text});return {base,model};}
- async paths(base,model,paths){const queue=[...new Set(paths)].filter(p=>!(p in model.files));await Promise.all(Array.from({length:Math.min(4,queue.length)},async()=>{while(queue.length){const p=queue.shift(),text=await this.read(base,p,true);if(text!=null)model.files[p]=text;}}));return normalize(model.files);}
+ async bulk(base,paths){
+  // One GraphQL request per 50 files instead of one REST request per file. Any failure other than 401 falls back to per-file reads.
+  const todo=paths.filter(p=>!this.cache.has(base+':'+p));
+  for(let i=0;i<todo.length;i+=50){const chunk=todo.slice(i,i+50);const vars={},decl=[],fields=[];chunk.forEach((p,n)=>{if(!safePath(p))throw Error('Invalid path/version');vars['e'+n]=base+':'+p;decl.push('$e'+n+':String!');fields.push('f'+n+':object(expression:$e'+n+'){...on Blob{text isTruncated}}');});
+   let r;try{r=await this.call('/graphql','POST',{query:'query('+decl.join(',')+'){repository(owner:"KidaJo",name:"personal-hq"){'+fields.join(' ')+'}}',variables:vars});}catch(e){if(e.status===401)throw e;return false;}
+   const repository=r?.data?.repository;if(!repository||r.errors)return false;
+   for(let n=0;n<chunk.length;n++){const blob=repository['f'+n];if(blob&&(blob.isTruncated||typeof blob.text!=='string'))return false;}
+   chunk.forEach((p,n)=>this.cache.set(base+':'+p,repository['f'+n]?.text??null));}
+  return true;
+ }
+ async paths(base,model,paths){const queue=[...new Set(paths)].filter(p=>!(p in model.files));if(queue.length>1&&/^[a-f0-9]{40}$/.test(base))await this.bulk(base,queue);await Promise.all(Array.from({length:Math.min(4,queue.length)},async()=>{while(queue.length){const p=queue.shift(),text=await this.read(base,p,true);if(text!=null)model.files[p]=text;}}));return normalize(model.files);}
  async children(base,model,id=null){return this.paths(base,model,(id==null?model.index.children:model.entities[id]?.children||[]).map(r=>r.path));}
  async branch(base,model,id){let m=model;for(let d=0;d<4;d++){const paths=[];const seen=new Set();function walk(key){if(seen.has(key))return;seen.add(key);for(const r of m.entities[key]?.children||[]){if(!m.entities[r.id])paths.push(r.path);else walk(r.id);}}walk(id);if(!paths.length)return m;m=await this.paths(base,m,paths);}throw Error('Incomplete subtree');}
  async active(base,model){let current=await this.children(base,model);for(let depth=0;depth<4;depth++){const missing=Object.values(current.entities).filter(e=>!current.paths[e.id].startsWith('archive/')).flatMap(e=>e.children||[]).filter(r=>!current.entities[r.id]);if(!missing.length){validate(current);return current;}current=await this.paths(base,current,missing.map(r=>r.path));}throw Error('Invalid or too-deep hierarchy');}

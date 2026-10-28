@@ -19,5 +19,6 @@
 - Product requirements and the data model live in the private `KidaJo/personal-hq` repository (`docs/FOUNDATION.md`, `docs/DECISIONS.md`, `docs/DATA_MODEL_V1.md`). Follow them; present any conflict to the Owner.
 - Preserve stable entity IDs and append-only history in any read or write path.
 - Run `npm test` (Node 22+) before reporting a change as ready.
+- App version format is `V<major>.<release>` with three digits each (for example `V000.018`), set in `APP_VERSION` in `app-v1.js` and shown in the footer. Major `000` means internal testing. Increment the release part by one in every publication; change the major part only on Owner instruction.
 - After publishing, verify the remote commit and the GitHub Pages deployment before reporting success.
 - Product UI, code and repository documentation are in English.

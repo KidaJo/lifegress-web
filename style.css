@@ -99,3 +99,8 @@ body.has-drafts #page-scroll{padding-bottom:110px}body.modal-open #page-scroll{o
 
 /* V1 partial-date and title fields share the responsive form treatment. */
 #hq-manual .hq-field input[type=text]{display:block;width:100%;min-width:0;max-width:100%;border:1px solid var(--lf-input);border-radius:12px;padding:15px;background:var(--hq-bg);color:var(--lf-text)}
+
+/* Home overview: compact task rows for Now and Up next. */
+#hq-manual .lf-focus{margin-bottom:8px}
+#hq-manual .lf-task-row{min-height:0;flex-direction:row;align-items:center;gap:16px;padding:16px 20px}
+#hq-manual .lf-task-row .hq-status{flex:none}
