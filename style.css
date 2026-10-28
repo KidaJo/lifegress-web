@@ -693,3 +693,29 @@ html body #page-scroll{scrollbar-gutter:stable}
 /* Dragging: the held card follows the pointer without lag; on release it glides into place. */
 #hq-manual .lf-reorder-item{transition:box-shadow .15s,transform .15s,translate .22s cubic-bezier(.2,.8,.2,1)}
 #hq-manual .lf-reorder-item.is-dragging{transition:box-shadow .15s,transform .15s;z-index:3}
+
+/* Group header: the whole row folds and opens the group in both states; Reorder sits above it with its own target. */
+#hq-manual .lf-collapsible{cursor:pointer}
+#hq-manual .lf-collapsible:not(.is-folded) .lf-group-title{pointer-events:auto;cursor:pointer}
+#hq-manual .lf-collapsible:not(.is-folded) .lf-group-end:hover{background:transparent}
+#hq-manual .lf-collapsible:hover{background:var(--lf-page)}
+#hq-manual .lf-collapsible:has(.lf-group-extra:hover){background:transparent}
+#hq-manual .lf-group-extra{position:relative;z-index:1;cursor:default}
+
+/* Phones: no grey flash on tap; keyboard focus rings (focus-visible) stay for keyboards only. */
+html{-webkit-tap-highlight-color:transparent}
+
+/* Search on phones: a little more room above the field, clear of Safari's blurred status-bar edge. */
+@media(max-width:720px){#hq-manual .hq-top.is-searching{padding-top:calc(max(14px,env(safe-area-inset-top)) + 8px)}}
+
+/* Home groups: headers sit close together; the space between open groups lives inside each folding body,
+   so folded groups stack evenly and tightly, and open groups keep a generous gap. */
+#hq-manual .lf-focus:has(>.lf-collapsible){margin-bottom:0}
+#hq-manual .lf-list-head.lf-collapsible{margin:0 -8px 4px}
+#hq-manual .lf-group-body>.hq-list{padding:8px 0 28px;transition:padding .32s cubic-bezier(.2,.8,.2,1),transform .32s cubic-bezier(.2,.8,.2,1)}
+#hq-manual .lf-group-body.is-collapsed>.hq-list{padding:0;transform:translateY(-12px)}
+/* Opening: the cards slide down from under the header and fade in together with the growing height, so no blank
+   space opens first. Folding: they fade out quickly while the height closes. */
+#hq-manual .lf-group-body{transition:grid-template-rows .32s cubic-bezier(.2,.8,.2,1),opacity .2s ease-out}
+#hq-manual .lf-group-body.is-collapsed{transition:grid-template-rows .28s cubic-bezier(.4,0,.2,1),opacity .14s ease}
+@media(prefers-reduced-motion:reduce){#hq-manual .lf-group-body,#hq-manual .lf-group-body.is-collapsed,#hq-manual .lf-group-body>.hq-list{transition:none}}

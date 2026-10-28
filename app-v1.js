@@ -1,9 +1,9 @@
 import {credentialStore} from './credentials.mjs';
-import {StoreV1} from './store-v1.mjs?v=026';
+import {StoreV1} from './store-v1.mjs?v=027';
 import {allowed,statuses,counts,transact,subtree,archived,decode,normalize,validate,eventContributor} from './data-v1.mjs';
 let storage;try{storage=localStorage;}catch{}
 // App version: V<major>.<release>. Increment the release part by one on every publication (see AGENTS.md).
-const APP_VERSION='V000.026';
+const APP_VERSION='V000.027';
 const credentials=credentialStore(storage),draftKey='lifegress:KidaJo/personal-hq:operations:v1',cacheKey='lifegress:KidaJo/personal-hq:cache:v1',avatarKey='lifegress:KidaJo/personal-hq:avatars:v1';
 const $=s=>document.querySelector(s),content=$('#content'),nav=$('#desktop-workspaces nav');
 $('#version').textContent=$('#menu-version').textContent=$('#side-version').textContent=APP_VERSION;
@@ -126,8 +126,9 @@ async function loadHistory(id){model=await store.history(remoteBase,model,id);co
 // so a Stage card never sits between Task checkboxes. Completed items go to the end of each group.
 // Collapsible groups (home): the header toggles the list; the choice is remembered on this device.
 let collapsedGroups=new Set();try{collapsedGroups=new Set(JSON.parse(storage?.getItem('lifegress:collapsed-groups:v1')||'[]'));}catch{}
-// Header: the title (tap to fold) on the left; on the right any group action (e.g. Reorder, hidden while folded),
-// then the item count (shown while folded) and the chevron. Title and chevron both toggle the group.
+// Header: the title on the left; on the right any group action (e.g. Reorder, hidden while folded),
+// then the item count (shown while folded) and the chevron. A tap anywhere on the row toggles the group,
+// except on the group action, which keeps its own tap target.
 function groupHead(key,title,count,extra=''){const closed=collapsedGroups.has(key);return `<div class="lf-list-head lf-collapsible${closed?' is-folded':''}" data-group-head="${key}"><button class="lf-group-toggle lf-group-title" data-action="toggle-group" data-group="${key}" aria-expanded="${!closed}"><h3>${title}</h3></button><span class="lf-group-extra">${extra}</span><button class="lf-group-toggle lf-group-end" data-action="toggle-group" data-group="${key}" aria-expanded="${!closed}" aria-label="${closed?'Show':'Hide'} ${title}" title="${closed?'Show':'Hide'}"><span class="lf-group-count">${count}</span>${icon('chevron-down')}</button></div>`;}
 function groupBody(key,html,cls=''){return `<div class="lf-group-body${collapsedGroups.has(key)?' is-collapsed':''}" data-group-body="${key}"><div class="hq-list${cls}">${html}</div></div>`;}
 const groupTitle={section:'Workspaces',project:'Projects',stage:'Stages',task:'Tasks'};
@@ -195,6 +196,12 @@ $('#search-clear').onclick=()=>{searchText='';$('#search-input').value='';showRe
 $('#search-cancel').onclick=exitSearch;
 // Reorder state: which group is being sorted and its unfinished items in their new order. Done saves once; Cancel discards.
 let reorderState=null,drag=null;
+// Touch screens: hover styles are for mice. iOS keeps :hover on the last tapped element, which looks like a stuck
+// selection, so hover rules are dropped on devices that cannot hover.
+if(matchMedia('(hover: none)').matches){const strip=list=>{for(let i=list.length-1;i>=0;i--){const r=list[i];if(r.cssRules&&!r.selectorText)strip(r.cssRules);else if(r.selectorText?.includes(':hover')){const keep=r.selectorText.split(',').filter(s=>!s.includes(':hover'));if(keep.length)r.selectorText=keep.join(',');else (r.parentRule||r.parentStyleSheet).deleteRule(i);}}};for(const s of document.styleSheets){try{strip(s.cssRules);}catch{}}}
+// iOS may shift the whole page up when the keyboard opens for the search field, pushing it under Safari's
+// blurred status-bar area. The app scrolls inside #page-scroll, so the window itself always stays at the top.
+window.visualViewport?.addEventListener('scroll',()=>{if(searchView&&window.scrollY)window.scrollTo(0,0);});
 const kidsOf=()=>(selected?view.entities[selected].children:view.index.children)||[];
 function finishReorder(save){const st=reorderState;reorderState=null;if(!save||!st){render();return;}const old=kidsOf().map(r=>r.id);let k=0;const ids=old.map(x=>view.entities[x]?.type===st.type&&!isDone(x)?st.order[k++]:x);if(ids.join()===old.join()){render();return;}run(()=>apply({kind:'reorder',id:selected??null,ids}));}
 // Drag: the held card follows the pointer; when its centre passes a neighbour's centre they swap places,
@@ -303,7 +310,7 @@ content.addEventListener('input',e=>{if(e.target.dataset.edit==='date')enableSav
 content.addEventListener('input',e=>{if(e.target.dataset.edit&&!(e.target instanceof HTMLButtonElement)){const save=content.querySelector('[data-action=save-edit]');if(save)save.disabled=e.target.value===editingValue()||e.target.tagName==='INPUT'&&!e.target.value.trim();}if(e.target.id==='token')content.querySelector('[data-action=connect]').disabled=!e.target.value.trim();});
 content.addEventListener('toggle',e=>{if(e.target.classList?.contains('lf-history')&&e.target.open)run(()=>loadHistory(e.target.dataset.id));},true);
 content.addEventListener('keydown',e=>{if(e.key==='Escape')closeActions();if(e.key==='Enter'&&e.target.id==='token'&&e.target.value.trim())content.querySelector('[data-action=connect]').click();if(e.target.dataset?.edit&&!(e.target instanceof HTMLButtonElement)){if(e.key==='Escape'){editing=null;render();}else if(e.key==='Enter'&&(e.target.tagName==='INPUT'||e.metaKey||e.ctrlKey)){e.preventDefault();content.querySelector('[data-action=save-edit]:not(:disabled)')?.click();}}});
-document.addEventListener('click',event=>{if(!event.target.closest('.lf-actions'))closeActions();const b=event.target.closest('button');if(!b)return;const a=b.dataset.action,id=b.dataset.id||selected;
+document.addEventListener('click',event=>{if(!event.target.closest('.lf-actions'))closeActions();const b=event.target.closest('button')||event.target.closest('[data-group-head]')?.querySelector('.lf-group-end');if(!b)return;const a=b.dataset.action,id=b.dataset.id||selected;
  // Saving happens in the background, so checking Tasks, Undo and Retry stay available while busy.
  if(a==='toggle'&&pressedLong){pressedLong=false;return;}
  if(a==='toggle'){const task=view.entities[id],previous=task.status,status=previous==='Completed'?'Not Started':'Completed';change({kind:'edit',id,fields:{status}},{kind:'edit',id,fields:{status:previous}});return;}
