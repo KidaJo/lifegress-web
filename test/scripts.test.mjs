@@ -55,3 +55,13 @@ test('AI writer dry run and create',async()=>{const dir=await fixture();try{
  const made=await main([dir,'create','task','New task','--parent','P','--actor','A','--source','B'],quiet);
  const r=await checkData(dir);assert.equal(r.ok,true);assert.equal(r.entities,4);assert.match(made.op.id,/^TASK-/);
 }finally{await rm(dir,{recursive:true});}});
+
+test('avatar command stores a crew photo, replaces the old one and rejects unsafe files',async()=>{const dir=await fixture();try{
+ const png=join(dir,'face.png');await writeFile(png,Buffer.from('89504e470d0a1a0a','hex'));
+ const first=await main([dir,'avatar','owner',png],quiet);const second=await main([dir,'avatar','owner',png],quiet);
+ const crew=decode(await readFile(join(dir,'crew.md'),'utf8')).members;assert.equal(crew[0].avatar,second.path);
+ await readFile(join(dir,second.path));await assert.rejects(readFile(join(dir,first.path)));
+ assert.equal((await checkData(dir)).ok,true);
+ const bad=join(dir,'bad.svg');await writeFile(bad,'<svg onload="alert(1)"></svg>');await assert.rejects(main([dir,'avatar','owner',bad],quiet),/scripts/);
+ await assert.rejects(main([dir,'avatar','ghost',png],quiet),/Unknown crew/);
+}finally{await rm(dir,{recursive:true});}});

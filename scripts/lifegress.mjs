@@ -1,8 +1,8 @@
 // Command-line writer for AI agents. Changes go through the same transaction and validation as the app,
 // so history, derived completion and references stay consistent. Never hand-edit V1 record files.
 // Usage: node scripts/lifegress.mjs <path-to-personal-hq> <command> [args] [--actor NAME --source TEXT] [--occurred DATE] [--dry-run]
-import {writeFile,mkdir,unlink} from 'node:fs/promises';
-import {join,dirname} from 'node:path';
+import {writeFile,mkdir,unlink,readFile} from 'node:fs/promises';
+import {join,dirname,extname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {normalize,validate,transact,diff,counts,statuses,crewSlug,serialize} from '../data-v1.mjs';
 import {loadData,expectedContributors} from './check-data.mjs';
@@ -15,6 +15,7 @@ const usage=`Commands:
   date <id> planned|completed <YYYY|YYYY-MM|YYYY-MM-DD|none>
   create <section|project|stage|task> "<title>" [--parent <id>]
   sync-contributors                          Rebuild every record's contributors from History (no History change)
+  avatar <crew-id> <image.jpg|png|svg>       Set a crew member's photo (square, about 256×256, max 300 KB; no History change)
 Write options: --actor "Claude" (crew name; new names join My Crew) --source "evidence" [--occurred YYYY-MM-DD] [--dry-run]`;
 
 function parse(argv){const args=[],opts={};for(let i=0;i<argv.length;i++){const a=argv[i];if(a==='--dry-run')opts.dryRun=true;else if(a.startsWith('--')){if(i+1>=argv.length)throw Error(`${a} needs a value`);opts[a.slice(2)]=argv[++i];}else args.push(a);}return {args,opts};}
@@ -37,9 +38,20 @@ export async function main(argv,log=console.log){
  const {args,opts}=parse(argv);const [dir,command,...rest]=args;
  if(!dir||!command)throw Error(usage);
  const data=await loadData(dir);if(data.errors.length)throw Error('Data check failed before writing:\n- '+data.errors.join('\n- '));
- const model=normalize(data.files);validate(model);
+ const model=normalize(data.files);
+ // sync-contributors repairs contributor lists, so it must not reject the stale ones it is about to replace.
+ if(command==='sync-contributors')for(const e of Object.values(model.entities))delete e.contributors;
+ validate(model);
  if(command==='show'){const id=rest[0];if(id&&!model.entities[id])throw Error('Unknown id: '+id);const lines=id?tree(model,[{id}]):tree(model,model.index.children);for(const l of lines)log(l);return {changes:[]};}
- if(command==='sync-contributors'){const expected=expectedContributors(model),next=structuredClone(model);for(const e of Object.values(next.entities)){const want=expected[e.id]||[];if(want.length)e.contributors=want;else delete e.contributors;}validate(next);const files=serialize(next);const changes=diff(model.files,files);if(!opts.dryRun)for(const c of changes)await writeFile(join(data.dir,c.path),c.after);log(`${opts.dryRun?'Dry run — would update':'Updated'} contributors in ${changes.length} file(s).`);return {changes};}
+ if(command==='sync-contributors'){const expected=expectedContributors(model),next=structuredClone(model);for(const e of Object.values(next.entities)){const want=expected[e.id]||[];if(want.length)e.contributors=want;else delete e.contributors;}validate(next);const files=serialize(next);const changes=diff(data.files,files);if(!opts.dryRun)for(const c of changes)await writeFile(join(data.dir,c.path),c.after);log(`${opts.dryRun?'Dry run — would update':'Updated'} contributors in ${changes.length} file(s).`);return {changes};}
+ if(command==='avatar'){const [id,file]=rest;if(!id||!file)throw Error('Usage: avatar <crew-id> <image.jpg|png|svg>');
+  const c=model.crew.members.find(x=>x.id===id);if(!c)throw Error('Unknown crew member: '+id);
+  const ext=extname(file).toLowerCase().replace('.jpeg','.jpg');if(!['.jpg','.png','.svg'].includes(ext))throw Error('Use a .jpg, .png or .svg file.');
+  const bytes=await readFile(file);if(bytes.length>300000)throw Error('Image is larger than 300 KB. Crop it to a square of about 256×256 first.');
+  if(ext==='.svg'&&/<script|\bon\w+\s*=|(?:href|src)\s*=\s*["']?\s*(?:https?:|javascript:|data:)/i.test(bytes.toString('utf8')))throw Error('SVG must not contain scripts or external links.');
+  const path=`assets/avatars/${id}-${Date.now().toString(36)}${ext}`,after=transact(model,[{kind:'crew',id,avatar:path}]);validate(after);const changes=diff(model.files,after.files);
+  if(!opts.dryRun){await mkdir(join(data.dir,'assets/avatars'),{recursive:true});await writeFile(join(data.dir,path),bytes);for(const ch of changes)await writeFile(join(data.dir,ch.path),ch.after);if(c.avatar&&c.avatar!==path)await unlink(join(data.dir,c.avatar)).catch(()=>{});}
+  log(`${opts.dryRun?'Dry run — would set':'Set'} ${c.name}'s photo to ${path}${c.avatar?` (replacing ${c.avatar})`:''}.`);return {changes,path};}
  if(!opts.actor||!opts.source)throw Error('Writes require --actor and --source so History records who changed what and why.');
  const op=operation(model,command,rest,opts);
  // --actor names a crew member (id, name or alias); a new name joins My Crew automatically.

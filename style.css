@@ -296,3 +296,72 @@ html{touch-action:manipulation}
 
 /* Properties block: dividers between rows and below the last one, none above the first. */
 #hq-manual .lf-props{border-top:0}
+
+/* Menu profile row: avatar and name with breathing room (beats the generic menu button rule). */
+#workspace-dialog .menu-body>button.lf-menu-profile{display:flex;align-items:center;gap:12px;padding:10px 14px}
+#workspace-dialog .lf-menu-profile span:last-child{font-weight:600}
+
+/* File inputs stay in the layout (visually hidden) so the label opens the picker in every browser. */
+#hq-manual .lf-file{position:relative;cursor:pointer}
+#hq-manual .lf-file input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0)}
+#hq-manual .lf-file:focus-within{outline:2px solid var(--lf-focus);outline-offset:2px;border-radius:8px}
+
+/* Photo crop dialog. */
+.lf-icon-zoom-in{--lf-icon:url(./icons/zoom-in.svg)}
+.lf-icon-zoom-out{--lf-icon:url(./icons/zoom-out.svg)}
+.lf-crop{width:min(360px,calc(100vw - 32px));border:0;border-radius:20px;padding:20px;background:var(--lf-card);color:var(--lf-text);box-shadow:0 20px 60px #214e3c40;font:15px/1.4 -apple-system,BlinkMacSystemFont,sans-serif}
+.lf-crop::backdrop{background:#1b2a2333}
+.lf-crop h2{margin:0 0 4px;font-size:20px;letter-spacing:-.3px}
+.lf-crop-hint{margin:0 0 16px;font-size:13px;color:var(--lf-secondary)}
+.lf-crop-frame{position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:12px;background:var(--lf-page);touch-action:none;cursor:grab;user-select:none}
+.lf-crop-frame:active{cursor:grabbing}
+.lf-crop-frame img{position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;pointer-events:none}
+.lf-crop-guide{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 999px #ffffff8c;outline:2px solid #fff;pointer-events:none}
+.lf-crop-zoom{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--lf-secondary)}
+.lf-crop-zoom input{flex:1;accent-color:var(--lf-action)}
+.lf-crop-zoom .lf-icon{width:18px;height:18px}
+.lf-crop-actions{display:flex;justify-content:flex-end;gap:8px}
+.lf-crop .hq-action{font:inherit;min-height:44px;border:0;border-radius:24px;padding:10px 18px;background:var(--lf-selected);color:var(--lf-action);cursor:pointer}
+.lf-crop .lf-primary{background:var(--lf-action);color:#fff}
+
+/* Avatar photo layered over the initials fallback. */
+.lf-avatar{position:relative}
+.lf-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+/* iPad and desktop: the sidebar holds profile, workspaces and tools, so the ☰ menu is phone-only. */
+@media(min-width:721px){
+ #hq-manual #workspace-toggle{display:none}
+ #hq-manual aside{display:flex;flex-direction:column;position:sticky;top:0;align-self:start}
+ #hq-manual .lf-side-profile{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;margin:0 0 24px;padding:8px 12px;border:0;border-radius:12px;background:transparent;color:var(--lf-text);font:inherit;font-size:15px;font-weight:600;text-align:left;cursor:pointer}
+ #hq-manual .lf-side-profile:hover,#hq-manual .lf-side-profile[aria-pressed=true]{background:var(--lf-selected)}
+ #hq-manual .lf-side-profile span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ #hq-manual .hq-section-label{display:block}
+ #hq-manual .lf-side-tools{display:flex;flex-direction:column;gap:2px;margin-top:24px;padding-top:16px;border-top:1px solid var(--lf-divider)}
+ #hq-manual .lf-side-tools button{min-height:40px;border:0;border-radius:10px;padding:8px 12px;background:transparent;color:var(--lf-secondary);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+ #hq-manual .lf-side-tools button:hover{background:var(--lf-selected);color:var(--lf-text)}
+}
+@media(max-width:720px){#hq-manual .lf-side-profile,#hq-manual .lf-side-tools{display:none}}
+
+/* Navigation tree (sidebar and phone menu): All projects, then indented workspaces, then Archive. */
+#hq-manual .hq-nav button,#workspace-dialog #mobile-workspaces button{display:block;width:100%;text-align:left}
+#hq-manual .hq-nav .lf-nav-root,#workspace-dialog .lf-nav-root{font-weight:600;color:var(--lf-text)}
+#hq-manual .hq-nav .lf-nav-child{padding-left:28px}
+#workspace-dialog #mobile-workspaces .lf-nav-child{padding-left:30px}
+#hq-manual .hq-nav .lf-nav-archive,#workspace-dialog .lf-nav-archive{margin-top:8px}
+#hq-manual .hq-nav button[aria-pressed=true],#workspace-dialog #mobile-workspaces button[aria-pressed=true]{background:var(--lf-selected);color:var(--lf-action);font-weight:600}
+
+/* App frame: always exactly one screen tall — header, a scrolling middle, and the footer at the bottom —
+   so no blank area appears below short pages. Width is capped at 1440px; only wider screens show the page color at the sides. */
+html,html body{height:100%;margin:0;padding:0}
+html body #hq-manual{display:flex;flex-direction:column;height:100dvh;min-height:0;max-width:1440px;margin:0 auto;border:0;border-radius:0;box-shadow:none;overflow:hidden}
+html body #page-scroll{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+html body #page-scroll .hq-layout{flex:1 0 auto;min-height:0}
+html body #page-scroll .hq-bottom{flex:none}
+/* The sidebar color runs to the bottom of the frame even when the page is short; the sidebar itself stays sticky. */
+@media(min-width:721px){
+ html body #hq-manual .hq-layout{background:linear-gradient(to right,var(--lf-page) 224px,transparent 224px)}
+ html body #hq-manual aside{background:transparent}
+}
+@media(min-width:1441px){html body #hq-manual{border-left:1px solid var(--lf-divider);border-right:1px solid var(--lf-divider)}}
+/* Messages now show as toasts; the old status line stays for screen readers only, so it adds no gap under the footer. */
+html body #hq-message{position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

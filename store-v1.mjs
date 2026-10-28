@@ -1,4 +1,4 @@
-import {GitHub} from './github.mjs?v=021';
+import {GitHub} from './github.mjs?v=022';
 import {decode,normalize,validate,transact,diff,dirname,safePath,avatarPath} from './data-v1.mjs';
 const repo='/repos/KidaJo/personal-hq';
 const read64=doc=>{if(doc.encoding!=='base64'||doc.size>2000000)throw Error('Unsupported Markdown file');return new TextDecoder().decode(Uint8Array.from(atob(doc.content.replace(/\s/g,'')),c=>c.charCodeAt(0)));};
@@ -14,7 +14,7 @@ export class StoreV1 extends GitHub {
  // Prefill the read cache from files saved on this device, so a start with an unchanged head needs one request.
  seed(base,files){if(!/^[a-f0-9]{40}$/.test(base))return;for(const [path,text] of Object.entries(files))if(safePath(path))this.cache.set(base+':'+path,text);}
  // Avatars are JPEG uploads or SVG default marks; the contents API returns them base64 encoded.
- async avatar(base,path){if(!avatarPath(path))throw Error('Invalid avatar path');const doc=await this.call(repo+'/contents/'+path+'?ref='+base);return `data:image/${path.endsWith('.svg')?'svg+xml':'jpeg'};base64,`+String(doc.content||'').replace(/\s/g,'');}
+ async avatar(base,path){if(!avatarPath(path))throw Error('Invalid avatar path');const doc=await this.call(repo+'/contents/'+path+'?ref='+base);return `data:image/${path.endsWith('.svg')?'svg+xml':path.endsWith('.png')?'png':'jpeg'};base64,`+String(doc.content||'').replace(/\s/g,'');}
  async tree(base){if(!this.treeCache.has(base)){const c=await this.call(repo+'/git/commits/'+base);const t=await this.call(repo+'/git/trees/'+c.tree.sha+'?recursive=1');if(t.truncated)throw Error('Truncated repository tree; no changes written');this.treeCache.set(base,{sha:c.tree.sha,entries:t.tree});}return this.treeCache.get(base);}
  async load(){const base=await this.head();const [text,crew]=await Promise.all([this.read(base,'index.md',true),this.read(base,'crew.md',true)]);if(text===null)throw Error('This repository has not migrated to V1. Use the existing app until migration is verified.');const model=normalize({'index.md':text,...(crew!=null?{'crew.md':crew}:{})});return {base,model};}
  async bulk(base,paths){

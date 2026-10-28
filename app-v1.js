@@ -1,9 +1,9 @@
 import {credentialStore} from './credentials.mjs';
-import {StoreV1} from './store-v1.mjs?v=021';
+import {StoreV1} from './store-v1.mjs?v=022';
 import {allowed,statuses,counts,transact,subtree,archived,decode,normalize,validate} from './data-v1.mjs';
 let storage;try{storage=localStorage;}catch{}
 // App version: V<major>.<release>. Increment the release part by one on every publication (see AGENTS.md).
-const APP_VERSION='V000.021';
+const APP_VERSION='V000.022';
 const credentials=credentialStore(storage),draftKey='lifegress:KidaJo/personal-hq:operations:v1',cacheKey='lifegress:KidaJo/personal-hq:cache:v1',avatarKey='lifegress:KidaJo/personal-hq:avatars:v1';
 const $=s=>document.querySelector(s),content=$('#content'),nav=$('#desktop-workspaces nav');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -16,18 +16,21 @@ try{avatars=JSON.parse(storage?.getItem(avatarKey)||'{}')||{};}catch{}
 // Phones and tablets are treated as personal devices and always remember the connection.
 const personalDevice=matchMedia('(pointer:coarse)').matches;
 const scroll=()=>$('#page-scroll');
-function say(text){$('#hq-message').textContent=text;}
+// Messages also appear as a toast so they are never missed at the bottom of a long page.
+function say(text){$('#hq-message').textContent=text;if(text)toast('notice',null,text);}
 function save(){try{storage.setItem(draftKey,JSON.stringify({base,ops}));}catch{}}
 function draftOps(){try{return JSON.parse(storage?.getItem(draftKey)||'null')?.ops||[];}catch{return [];}}
 // Remembered devices keep the last loaded records (not History) so the next start can render before GitHub answers.
 function saveCache(){if(!remember||!model)return;const files={};for(const [p,t] of Object.entries(model.files))if(!p.includes('/history/'))files[p]=t;try{storage.setItem(cacheKey,JSON.stringify({base:remoteBase,files}));}catch{}}
 function clearCache(){try{storage.removeItem(cacheKey);storage.removeItem(avatarKey);}catch{}avatars={};}
 // Save status toast: saving (info), saved (success, auto-hides, optional Undo), error (persistent, Retry/Discard).
-function toast(state,undo){clearTimeout(toastTimer);const t=$('#toast');if(!state){t.hidden=true;return;}
- const icon={saved:'circle-check',error:'triangle-alert'}[state];
- t.className='lf-toast state-'+state;t.hidden=false;
- t.innerHTML=`${state==='saving'?'<span class="lf-spinner" aria-hidden="true"></span>':`<span class="lf-icon lf-icon-${icon}" aria-hidden="true"></span>`}<span>${state==='saving'?'Saving…':state==='saved'?'Saved':'Couldn’t save.'}</span>${state==='saved'&&undo?button('undo','Undo'):''}${state==='error'?button('retry','Retry')+button('discard','Discard'):''}`;
+// States: saving, saved (auto-hides, optional Undo), error (persistent, Retry/Discard), notice (an error message that auto-hides).
+function toast(state,undo,text){clearTimeout(toastTimer);const t=$('#toast');if(!state){t.hidden=true;return;}
+ const icon={saved:'circle-check',error:'triangle-alert',notice:'triangle-alert'}[state];
+ t.className='lf-toast state-'+(state==='notice'?'error':state);t.hidden=false;
+ t.innerHTML=`${state==='saving'?'<span class="lf-spinner" aria-hidden="true"></span>':`<span class="lf-icon lf-icon-${icon}" aria-hidden="true"></span>`}<span>${esc(text??{saving:'Saving…',saved:'Saved',error:'Couldn’t save.'}[state])}</span>${state==='saved'&&undo?button('undo','Undo'):''}${state==='error'?button('retry','Retry')+button('discard','Discard'):''}`;
  if(state==='saved')toastTimer=setTimeout(()=>toast(null),undo?6000:2500);
+ if(state==='notice')toastTimer=setTimeout(()=>toast(null),6000);
  undoAction=undo||null;}
 function closeMenu(){const d=$('#workspace-dialog');d.classList.remove('menu-expanded');$('#workspace-toggle').setAttribute('aria-expanded','false');setTimeout(()=>d.close(),matchMedia('(prefers-reduced-motion: reduce)').matches?0:240);}
 function loading(){content.innerHTML='<div class="lf-connect lf-loading"><span class="lf-spinner" aria-hidden="true"></span><p>Loading your workspace…</p></div>';nav.innerHTML='';$('#workspace-toggle').hidden=true;$('#version').textContent=APP_VERSION;}
@@ -42,7 +45,9 @@ function stats(id){const e=view.entities[id];if(e.type==='task')return badge(e.s
 function summary(id){const c=counts(view,id);return c.loaded&&c.total?`${c.completed} of ${c.total} ${c.total===1?'task':'tasks'} done`:'';}
 // Crew: avatars (uploaded photo, else an initial on a brand tone) and the people who worked on a record and everything under it.
 const member=id=>view?.crew?.members.find(c=>c.id===id);
-function avatar(id,size='sm'){const c=member(id),name=c?.name||id,src=c?.avatar&&avatars[c.avatar];if(src)return `<img class="lf-avatar lf-avatar-${size}" src="${src}" alt="${esc(name)}">`;const i=view?.crew?.members.findIndex(c=>c.id===id)??-1,tone=(i<0?[...id].reduce((a,ch)=>a+ch.charCodeAt(0),0):i)%5;return `<span class="lf-avatar lf-avatar-${size} lf-tone-${tone}" role="img" aria-label="${esc(name)}">${esc(name.trim().charAt(0).toUpperCase()||'?')}</span>`;}
+// Initials are the fallback: shown until a photo has loaded, and kept if the photo fails (for example on a poor connection).
+function avatar(id,size='sm'){const c=member(id),name=c?.name||id,src=c?.avatar&&avatars[c.avatar];const i=view?.crew?.members.findIndex(c=>c.id===id)??-1,tone=(i<0?[...id].reduce((a,ch)=>a+ch.charCodeAt(0),0):i)%5;return `<span class="lf-avatar lf-avatar-${size} lf-tone-${tone}" role="img" aria-label="${esc(name)}">${esc(name.trim().charAt(0).toUpperCase()||'?')}${src?`<img src="${src}" alt="">`:''}</span>`;}
+document.addEventListener('error',e=>{if(e.target.matches?.('.lf-avatar img'))e.target.remove();},true);
 function people(id){const out=[];const visit=key=>{const e=view.entities[key];if(!e)return;for(const c of e.contributors||[])if(!out.includes(c))out.push(c);for(const r of e.children||[])visit(r.id);};visit(id);return out;}
 function crewRow(id){const list=people(id);return list.length?`<span class="lf-crew">${list.slice(0,5).map(c=>avatar(c)).join('')}${list.length>5?`<span class="lf-crew-more">+${list.length-5}</span>`:''}</span>`:'';}
 function crewNames(id){const list=people(id);return list.length?`<div class="lf-crew-names">${list.map(c=>`<span class="lf-crew-name">${avatar(c)}<span>${esc(member(c)?.name||c)}</span></span>`).join('')}</div>`:'';}
@@ -64,7 +69,7 @@ function editActions(){return `<div class="hq-bar lf-edit-actions"><button class
 const addButton=(type,data='')=>`<button class="lf-add-chip" data-action="new" data-type="${type}" ${data}>${icon('plus')}<span>${type[0].toUpperCase()+type.slice(1)}</span></button>`;
 function detail(e){
  const editable=!archived(view,e.id),parent=view.entities[e.parent_id],derived=e.type!=='task'?counts(view,e.id):null;
- const back=`<button class="lf-back" ${parent?`data-open="${esc(parent.id)}"`:'data-action="home"'}>${icon('arrow-left')}<span>${esc(parent?.title||'Overview')}</span></button>`;
+ const back=`<button class="lf-back" ${parent?`data-open="${esc(parent.id)}"`:'data-action="home"'}>${icon('arrow-left')}<span>${esc(parent?.title||'All projects')}</span></button>`;
  const title=editing==='title'?`<div class="lf-inline-edit"><input class="lf-title-input" data-edit="title" value="${esc(e.title)}" aria-label="Title">${editActions()}</div>`:`<div class="lf-title-row"><h2>${esc(e.title)}</h2>${editable?iconButton('edit','pencil','Edit title','data-edit="title"')+actionsMenu(e):''}</div>`;
  const status=e.type==='task'?`<div class="lf-segmented" role="group" aria-label="Status">${statuses.map(s=>`<button data-action="set-status" data-status="${esc(s)}" aria-pressed="${s===e.status}" ${editable?'':'disabled'}>${icon(statusIcon[s])}<span>${esc(s)}</span></button>`).join('')}</div>`:stats(e.id);
  let props='';
@@ -76,7 +81,7 @@ function detail(e){
  else if(e.note)props+=prop('Note',`<p>${esc(e.note)}</p>`,editable?iconButton('edit','pencil','Edit note','data-edit="note"'):'',' lf-prop-note');
  else if(editable)props+=`<div class="lf-prop lf-prop-add"><button class="lf-add" data-action="edit" data-edit="note">${icon('plus')}<span>Add note</span></button></div>`;
  const context=e.legacy?`<section class="lf-context"><h3>Context</h3><p>${esc(e.legacy.summary||e.legacy.detail||'')}</p><details><summary>More context</summary><pre>${esc(e.legacy.objective||'')}</pre><h3>Next actions</h3><pre>${esc(e.legacy.next_actions||'')}</pre><h3>Milestones</h3><pre>${esc(e.legacy.milestones||'')}</pre><pre>${esc(e.legacy.blockers||'')}</pre><p class="hq-small">${esc(e.confidence||e.legacy.confidence||'')} · Original descriptions retained as source context.</p></details></section>`:'';
- const list=e.type==='task'?'':`<div class="lf-list-head"><h3>${{section:'Projects & tasks',project:'Stages & tasks',stage:'Tasks'}[e.type]}</h3>${editable?`<div class="lf-head-actions">${allowed[e.type].map(type=>addButton(type)).join('')}</div>`:''}</div><div class="hq-list">${ordered(e.children||[]).map(row).join('')||'<p class="hq-small">Nothing here yet.</p>'}</div>`;
+ const list=e.type==='task'?'':childGroups(e.children||[],allowed[e.type],editable);
  return `${back}${title}${crewNames(e.id)}${status}<div id="manage-content"></div>${editable?'':'<p>Archived · restore before editing</p>'}${props?`<div class="lf-props">${props}</div>`:''}${context}${list}<details class="lf-history" data-id="${esc(e.id)}"><summary>History</summary><div id="history-content"><p class="hq-small">Loading…</p></div><p class="hq-small lf-record-id">Record ID ${esc(e.id)}</p></details>`;}
 // Actions on the record itself live in the ⋯ menu beside the title; Delete is last, red, and asks again.
 function actionsMenu(e){const arrange=[...(e.type!=='section'?[['move','Move to…']]:[]),...(e.children?.length>1?[['reorder','Reorder']]:[])],item=([a,l])=>`<button role="menuitem" data-action="${a}">${l}</button>`;
@@ -91,26 +96,33 @@ function movePicker(id){const entity=view.entities[id],inside=new Set(subtree(vi
 function closeActions(){const m=content.querySelector('.lf-menu');if(m&&!m.hidden){m.hidden=true;content.querySelector('[data-action=actions-menu]')?.setAttribute('aria-expanded','false');}}
 // History loads only when its block is opened.
 async function loadHistory(id){model=await store.history(remoteBase,model,id);const events=Object.entries(model.files).filter(([p])=>p.includes('/history/')).flatMap(([,t])=>decode(t).events||[]);const ids=new Set(subtree(view,id));const box=content.querySelector('#history-content');if(box)box.innerHTML=events.filter(e=>ids.has(e.entity_id)||e.change?.original_markdown&&[...ids].some(id=>e.change.original_markdown.includes(id))).map(e=>`<article><strong>${esc(e.event_type)}</strong><p class="hq-small">${esc(e.actor||'')} · Occurred: ${esc(e.occurred_at||'Unknown')} · Recorded: ${esc(e.recorded_at||'Unknown')}</p><pre>${esc(e.change.original_markdown||JSON.stringify(e.change,null,2))}</pre></article>`).join('')||'<p class="hq-small">No history yet.</p>';}
-function photoButton(id,label){return `<label class="lf-add">${icon('plus')}<span>${label}</span><input type="file" accept="image/*" data-avatar-for="${esc(id)}" hidden></label>`;}
+// Containers and Tasks are listed in separate groups (Projects / Stages, then Tasks), each with its own add button,
+// so a Stage card never sits between Task checkboxes. Completed items go to the end of each group.
+const groupTitle={section:'Workspaces',project:'Projects',stage:'Stages',task:'Tasks'};
+function childGroups(refs,types,editable){return types.map(type=>{const items=refs.filter(r=>view.entities[r.id]?.type===type),done=r=>view.entities[r.id]?.type==='task'?view.entities[r.id].status==='Completed':counts(view,r.id).status==='Completed';if(!items.length&&!editable)return '';
+ return `<div class="lf-list-head"><h3>${groupTitle[type]}</h3>${editable?`<div class="lf-head-actions">${addButton(type)}</div>`:''}</div><div class="hq-list">${[...items.filter(r=>!done(r)),...items.filter(done)].map(row).join('')||`<p class="hq-small">No ${groupTitle[type].toLowerCase()} yet.</p>`}</div>`;}).join('');}
+function photoButton(id,label){return `<label class="lf-add lf-file">${icon('plus')}<span>${label}</span><input type="file" accept="image/*" data-avatar-for="${esc(id)}"></label>`;}
 function profile(){const me=member('owner')||{id:'owner',name:'Owner'},count=id=>Object.values(view.entities).filter(e=>(e.contributors||[]).includes(id)).length;
  const name=editing==='owner-name'?`<input class="lf-title-input" data-edit="name" value="${esc(me.name)}" aria-label="Your name">${editActions()}`:`<div class="lf-name-row"><h3>${esc(me.name)}</h3>${iconButton('edit','pencil','Edit name','data-edit="owner-name"')}</div>`;
  const crew=view.crew.members.filter(c=>c.id!=='owner').map(c=>`<div class="hq-project lf-crew-row">${avatar(c.id,'md')}<span class="hq-project-info"><span class="hq-project-name">${esc(c.name)}</span><span class="hq-small">${count(c.id)?`Worked on ${count(c.id)} ${count(c.id)===1?'item':'items'}`:'No updates yet'}</span></span></div>`).join('');
- return `<button class="lf-back" data-action="home">${icon('arrow-left')}<span>Overview</span></button><h2>Profile</h2><section class="lf-profile">${avatar('owner','lg')}<div class="lf-profile-info">${name}${photoButton('owner',me.avatar?'Change photo':'Add photo')}</div></section><div class="lf-list-head"><h3>My Crew</h3></div><p class="hq-small">AI collaborators join automatically when they first update your data. Their names and photos are fixed.</p><div class="hq-list">${crew||'<p class="hq-small">No collaborators yet.</p>'}</div>`;}
+ return `<h2>Profile</h2><section class="lf-profile">${avatar('owner','lg')}<div class="lf-profile-info">${name}${photoButton('owner',me.avatar?'Change photo':'Add photo')}</div></section><div class="lf-list-head"><h3>My Crew</h3></div><p class="hq-small">AI collaborators join automatically when they first update your data. Their names and photos are fixed.</p><div class="hq-list">${crew||'<p class="hq-small">No collaborators yet.</p>'}</div>`;}
 function render(){
  if(!store||!view)return;$('#workspace-toggle').hidden=false;
- const me=member('owner');$('#menu-profile').innerHTML=`${avatar('owner','md')}<span>${esc(me?.name||'Profile')}</span>`;
+ const me=member('owner');$('#menu-profile').innerHTML=$('#side-profile').innerHTML=`${avatar('owner','md')}<span>${esc(me?.name||'Profile')}</span>`;$('#side-profile').setAttribute('aria-pressed',String(profileView));
  let activeSection=view.entities[selected];while(activeSection&&activeSection.type!=='section')activeSection=view.entities[activeSection.parent_id];
- const sections=view.index.children.filter(r=>r.type==='section');nav.innerHTML=sections.map(r=>`<button data-open="${esc(r.id)}" aria-pressed="${activeSection?.id===r.id}">${esc(view.entities[r.id]?.title||r.id)}</button>`).join('')+button('archive-list','Archive');$('#mobile-workspaces').innerHTML=nav.innerHTML;
+ const sections=view.index.children.filter(r=>r.type==='section'),home=!selected&&!profileView&&!archiveView;
+ // Navigation tree: "All projects" is the root and opens the home page; workspaces are indented under it; Archive stays apart.
+ nav.innerHTML=`<button class="lf-nav-root" data-action="home" aria-pressed="${home}">All projects</button>`+sections.map(r=>`<button class="lf-nav-child" data-open="${esc(r.id)}" aria-pressed="${activeSection?.id===r.id}">${esc(view.entities[r.id]?.title||r.id)}</button>`).join('')+`<button class="lf-nav-archive" data-action="archive-list" aria-pressed="${archiveView}">Archive</button>`;$('#mobile-workspaces').innerHTML=nav.innerHTML;
  const e=view.entities[selected];
  if(profileView)content.innerHTML=profile();
  else if(archiveView){content.innerHTML=`<h2>Archive</h2><p class="hq-small">Excluded from active Section progress. Restore to resume editing.</p>${view.catalog.entries.map(a=>`<div class="hq-project"><span>${esc(a.title||a.id)}</span>${button('restore','Restore',`data-id="${esc(a.id)}"`)}${button('delete','Delete',`data-id="${esc(a.id)}"`)}</div>`).join('')||'<p>No archived items.</p>'}<div id="manage-content"></div>`;return;}
  // Home keeps the Now / Up next list it opened with, so a Task checked here stays visible until the next visit.
- else if(!e){homeList??=focus();const pick=ids=>ids.map(id=>view.entities[id]).filter(x=>x&&!archived(view,x.id));const group=(title,list)=>list.length?`<section class="lf-focus"><h3>${title}</h3><div class="hq-list">${list.map(x=>taskRow(x)).join('')}</div></section>`:'';content.innerHTML=`<div class="lf-page-head"><h2>Overview</h2><div class="lf-head-actions">${addButton('section')}${addButton('task')}</div></div>${group('Now',pick(homeList.now))}${group('Up next',pick(homeList.next))}<h3>Workspaces</h3><div class="hq-list">${ordered(view.index.children).map(row).join('')}</div>`;}
+ else if(!e){homeList??=focus();const pick=ids=>ids.map(id=>view.entities[id]).filter(x=>x&&!archived(view,x.id));const group=(title,list)=>list.length?`<section class="lf-focus"><h3>${title}</h3><div class="hq-list">${list.map(x=>taskRow(x)).join('')}</div></section>`:'';content.innerHTML=`<div class="lf-page-head"><h2>All projects</h2><div class="lf-head-actions">${addButton('section')}${addButton('task')}</div></div>${group('Now',pick(homeList.now))}${group('Up next',pick(homeList.next))}${childGroups(view.index.children,['section','task'],false)}`;}
  else content.innerHTML=detail(e);
  const input=content.querySelector('[data-edit]:not(button)');if(input){input.focus();if(input.tagName==='INPUT')input.select();}
 }
 function preview(){view=ops.length?transact(model,ops):structuredClone(model);render();}
-async function load(){const data=await store.load();base=remoteBase=data.base;if(!syncing){ops=draftOps();locked=0;}model=await store.active(base,data.model);if(ops.some(structural))model=await store.archives(base,model,true);homeList=null;try{preview();}catch{ops=[];save();preview();}saveCache();loadAvatars();if(ops.length)await scheduleSync();}
+async function load(){const data=await store.load();base=remoteBase=data.base;if(!syncing){ops=draftOps().filter(o=>!(o.kind==='crew'&&o.avatar&&!assets.some(a=>a.path===o.avatar)));locked=0;}model=await store.active(base,data.model);if(ops.some(structural))model=await store.archives(base,model,true);homeList=null;try{preview();}catch{ops=[];save();preview();}saveCache();loadAvatars();if(ops.length)await scheduleSync();}
 async function loadAvatars(){const need=[...new Set(view.crew.members.map(c=>c.avatar).filter(p=>p&&!avatars[p]))];if(!need.length)return;await Promise.all(need.map(async p=>{try{avatars[p]=await store.avatar(remoteBase,p);}catch{}}));const keep={};for(const c of view.crew.members)if(c.avatar&&avatars[c.avatar])keep[c.avatar]=avatars[c.avatar];avatars=keep;if(remember)try{storage.setItem(avatarKey,JSON.stringify(avatars));}catch{}render();}
 async function open(id){selected=id;editing=null;archiveView=profileView=false;homeList=null;closeMenu();if(model.entities[id])model=await store.branch(remoteBase,model,id);preview();scroll().scrollTo({top:0});}
 // Stage a change locally and redraw at once. Only ops that are not already being sent can be merged.
@@ -126,25 +138,43 @@ function stage(op){const sent=ops.slice(0,locked);let rest=[...ops.slice(locked)
  const next=[...sent,...rest];view=transact(model,next);ops=next;save();if(selected&&!view.entities[selected])selected=null;render();}
 async function queue(op){model=await store.active(base,model);if(structural(op))model=await store.archives(base,model,true);stage(op);}
 // Save pending changes to GitHub. If GitHub moved on (another device or an AI), re-apply the changes on the latest version first.
-async function sync(undo){if(!ops.length)return true;toast('saving');locked=ops.length;const sending=ops.slice(0,locked);try{
+async function sync(undo){if(!ops.length)return true;locked=ops.length;const sending=ops.slice(0,locked),photo=sending.some(o=>o.kind==='crew'&&o.avatar);toast('saving',null,photo?'Uploading photo…':null);try{
   const data=await store.load();if(data.base!==base){let m=await store.active(data.base,data.model);if(sending.some(structural))m=await store.archives(data.base,m,true);transact(m,sending);model=m;base=remoteBase=data.base;}
   let review;try{review=await store.prepare(base,model,sending);}catch(e){if(e.message!=='No changes to review')throw e;}
   const crewOps=sending.filter(o=>o.kind==='crew'&&o.avatar),uploads=assets.filter(a=>crewOps.some(o=>o.avatar===a.path));
   if(review){review.assets=[...uploads.map(a=>({path:a.path,base64:a.dataUrl.split(',')[1]})),...crewOps.filter(o=>o.previousAvatar&&o.previousAvatar!==o.avatar).map(o=>({path:o.previousAvatar,base64:null}))];const result=await store.commit(review);base=remoteBase=result.base;model=review.model;}
   for(const a of uploads)avatars[a.path]=a.dataUrl;assets=assets.filter(a=>!uploads.includes(a));
-  ops=ops.slice(locked);locked=0;save();saveCache();preview();if(ops.length)toast('saving');else toast('saved',undo);return true;
- }catch(e){locked=0;if(e.status===401){expired();return false;}toast('error');return false;}}
+  ops=ops.slice(locked);locked=0;save();saveCache();preview();if(ops.length)toast('saving');else toast('saved',undo,photo?'Photo updated':null);return true;
+ }catch(e){locked=0;if(e.status===401){expired();return false;}toast('error',null,photo?'Couldn’t upload the photo.':null);return false;}}
 // One save at a time; changes made while saving are sent right after, so quick taps are never dropped.
 function scheduleSync(undo){pendingUndo=undo;if(syncing){again=true;return syncing;}syncing=(async()=>{try{let ok;do{again=false;ok=await sync(pendingUndo);}while(ok&&again&&ops.length);}finally{syncing=null;}})();return syncing;}
 async function apply(op,undo){await queue(op);await scheduleSync(undo);}
 function change(op,undo){try{stage(op);}catch(e){say(e.message);return;}scheduleSync(undo);}
 async function deleteEntity(id){model=await store.active(base,model);model=await store.archives(base,model,true);preview();const ids=new Set(subtree(view,id));let more=true;while(more){more=false;for(const a of view.catalog.entries)if(ids.has(a.original_parent_id)&&!ids.has(a.id)){subtree(view,a.id).forEach(x=>ids.add(x));more=true;}}if(confirm(`Delete ${view.entities[id].title} and ${ids.size-1} descendants, including their history? Earlier Git commits may still retain this data.`))await apply({kind:'delete',id,confirm:true});}
-// Photos are shrunk on this device to a 256×256 JPEG before upload, so any size of original works.
-async function shrink(file){const url=URL.createObjectURL(file);try{const img=new Image();img.src=url;await img.decode();const s=Math.min(img.naturalWidth,img.naturalHeight),c=document.createElement('canvas');c.width=c.height=256;c.getContext('2d').drawImage(img,(img.naturalWidth-s)/2,(img.naturalHeight-s)/2,s,s,0,0,256,256);return c.toDataURL('image/jpeg',0.85);}finally{URL.revokeObjectURL(url);}}
+// Photo crop: a square frame with a round guide. Drag to move, pinch / scroll / slider to zoom, then the chosen square
+// is drawn at 256×256 JPEG on this device, so any size of original works.
+const crop={img:null,url:'',who:'',zoom:1,x:0,y:0,pointers:new Map(),pinch:0};
+function cropFrame(){return $('#crop-frame').getBoundingClientRect().width;}
+function cropLayout(){const v=cropFrame(),{img}=crop,s=v/Math.min(img.naturalWidth,img.naturalHeight)*crop.zoom,w=img.naturalWidth*s,h=img.naturalHeight*s;crop.x=Math.min(0,Math.max(v-w,crop.x));crop.y=Math.min(0,Math.max(v-h,crop.y));const el=$('#crop-image');el.style.width=w+'px';el.style.height=h+'px';el.style.transform=`translate(${crop.x}px,${crop.y}px)`;}
+function cropZoom(zoom,cx=cropFrame()/2,cy=cropFrame()/2){const next=Math.min(4,Math.max(1,zoom)),k=next/crop.zoom;crop.x=cx-(cx-crop.x)*k;crop.y=cy-(cy-crop.y)*k;crop.zoom=next;$('#crop-zoom').value=String(next);cropLayout();}
+async function openCrop(file,who){const url=URL.createObjectURL(file),img=new Image();img.src=url;try{await img.decode();}catch{URL.revokeObjectURL(url);say(/heic|heif/i.test(file.type+file.name)?'This browser can’t open HEIC photos. Choose a JPEG or PNG, or use Safari.':'That image couldn’t be opened. Choose a JPEG or PNG.');return;}
+ Object.assign(crop,{img,url,who,zoom:1,x:0,y:0});crop.pointers.clear();$('#crop-image').src=url;$('#crop-zoom').value='1';$('#crop-dialog').showModal();const v=cropFrame(),s=v/Math.min(img.naturalWidth,img.naturalHeight);crop.x=(v-img.naturalWidth*s)/2;crop.y=(v-img.naturalHeight*s)/2;cropLayout();}
+function closeCrop(){$('#crop-dialog').close();if(crop.url)URL.revokeObjectURL(crop.url);crop.img=null;crop.url='';}
+function useCrop(){const v=cropFrame(),s=v/Math.min(crop.img.naturalWidth,crop.img.naturalHeight)*crop.zoom,c=document.createElement('canvas');c.width=c.height=256;c.getContext('2d').drawImage(crop.img,-crop.x/s,-crop.y/s,v/s,v/s,0,0,256,256);const dataUrl=c.toDataURL('image/jpeg',0.85),who=crop.who;closeCrop();
+ const path=`assets/avatars/${who}-${Date.now().toString(36)}.jpg`;avatars[path]=dataUrl;assets.push({path,dataUrl});change({kind:'crew',id:who,avatar:path,previousAvatar:member(who)?.avatar||null});}
+document.body.insertAdjacentHTML('beforeend',`<dialog id="crop-dialog" class="lf-crop" aria-labelledby="crop-title"><h2 id="crop-title">Choose photo</h2><p class="lf-crop-hint">Drag to move. Pinch or use the slider to zoom.</p><div id="crop-frame" class="lf-crop-frame"><img id="crop-image" alt="" draggable="false"><span class="lf-crop-guide" aria-hidden="true"></span></div><label class="lf-crop-zoom"><span class="lf-icon lf-icon-zoom-out" aria-hidden="true"></span><input id="crop-zoom" type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><span class="lf-icon lf-icon-zoom-in" aria-hidden="true"></span></label><div class="lf-crop-actions"><button class="hq-action" id="crop-cancel">Cancel</button><button class="hq-action lf-primary" id="crop-use">Use photo</button></div></dialog>`);
+$('#crop-cancel').onclick=closeCrop;$('#crop-use').onclick=useCrop;$('#crop-dialog').addEventListener('cancel',e=>{e.preventDefault();closeCrop();});
+$('#crop-zoom').oninput=e=>cropZoom(Number(e.target.value));
+$('#crop-frame').addEventListener('wheel',e=>{e.preventDefault();const r=$('#crop-frame').getBoundingClientRect();cropZoom(crop.zoom*(e.deltaY<0?1.08:1/1.08),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+$('#crop-frame').addEventListener('pointerdown',e=>{$('#crop-frame').setPointerCapture(e.pointerId);crop.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(crop.pointers.size===2){const [a,b]=[...crop.pointers.values()];crop.pinch=Math.hypot(a.x-b.x,a.y-b.y);}});
+$('#crop-frame').addEventListener('pointermove',e=>{const prev=crop.pointers.get(e.pointerId);if(!prev)return;crop.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(crop.pointers.size===2){const [a,b]=[...crop.pointers.values()],d=Math.hypot(a.x-b.x,a.y-b.y),r=$('#crop-frame').getBoundingClientRect();if(crop.pinch)cropZoom(crop.zoom*d/crop.pinch,(a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top);crop.pinch=d;}
+ else{crop.x+=e.clientX-prev.x;crop.y+=e.clientY-prev.y;cropLayout();}});
+for(const type of ['pointerup','pointercancel'])$('#crop-frame').addEventListener(type,e=>{crop.pointers.delete(e.pointerId);crop.pinch=0;});
 // A picked date or photo saves immediately; title, note and name edits wait for Save.
 content.addEventListener('change',e=>{
  const name=e.target.dataset.date;if(name){const id=selected,previous=view.entities[id][name]??'';change({kind:'edit',id,fields:{[name]:e.target.value}},{kind:'edit',id,fields:{[name]:previous}});return;}
- const who=e.target.dataset.avatarFor,file=e.target.files?.[0];if(who&&file)(async()=>{let dataUrl;try{dataUrl=await shrink(file);}catch{say('That image could not be read. Try a JPEG or PNG.');return;}const path=`assets/avatars/${who}-${Date.now().toString(36)}.jpg`;avatars[path]=dataUrl;assets.push({path,dataUrl});change({kind:'crew',id:who,avatar:path,previousAvatar:member(who)?.avatar||null});})();});
+ const who=e.target.dataset.avatarFor,file=e.target.files?.[0];if(who&&file){e.target.value='';openCrop(file,who);}});
 content.addEventListener('click',e=>{if(e.target.matches?.('input[type=date]'))try{e.target.showPicker();}catch{}});
 const editingValue=()=>editing==='owner-name'?member('owner')?.name||'':view.entities[selected]?.[editing]||'';
 content.addEventListener('input',e=>{if(e.target.dataset.edit&&!(e.target instanceof HTMLButtonElement)){const save=content.querySelector('[data-action=save-edit]');if(save)save.disabled=e.target.value===editingValue()||e.target.tagName==='INPUT'&&!e.target.value.trim();}if(e.target.id==='token')content.querySelector('[data-action=connect]').disabled=!e.target.value.trim();});
@@ -184,8 +214,9 @@ $('#home').onclick=()=>{if(busy)return;selected=null;archiveView=profileView=fal
 // The menu opens without moving focus onto the logo, which looked like a selected state.
 $('#workspace-toggle').onclick=()=>{if(busy)return;const d=$('#workspace-dialog');d.showModal();document.activeElement?.blur();$('#workspace-toggle').setAttribute('aria-expanded','true');requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('menu-expanded')));};
 $('#close-workspaces').onclick=closeMenu;$('#workspace-dialog').addEventListener('cancel',e=>{e.preventDefault();closeMenu();});
-$('#refresh').onclick=()=>run(async()=>{closeMenu();await load();});
-for(const id of ['forget','logout'])$('#'+id).onclick=()=>{if(busy)return;credentials.forget();clearCache();store=null;model=view=null;remember=false;closeMenu();loggedOut('This device no longer remembers your access.');};
+// The phone menu and the iPad / desktop sidebar share these actions.
+for(const id of ['refresh','side-refresh'])$('#'+id).onclick=()=>run(async()=>{closeMenu();await load();});
+for(const id of ['forget','logout','side-forget','side-logout'])$('#'+id).onclick=()=>{if(busy)return;credentials.forget();clearCache();store=null;model=view=null;remember=false;closeMenu();loggedOut('This device no longer remembers your access.');};
 // Remembered devices show the last saved workspace at once, then refresh from GitHub in the background.
 const savedToken=credentials.read();
 if(!savedToken)loggedOut();

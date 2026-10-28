@@ -6,7 +6,7 @@ const fail = text => { throw Error(text); };
 export const dirname = path => path.slice(0,path.lastIndexOf('/'));
 // Crew: the Owner and AI collaborators (crew.md). Avatars are small JPEGs (uploads) or SVGs (default AI marks) in assets/avatars/.
 export const crewId = /^[a-z0-9][a-z0-9-]{0,39}$/;
-export const avatarPath = p => typeof p==='string' && /^assets\/avatars\/[a-z0-9][a-z0-9-]{0,63}\.(?:jpg|svg)$/.test(p);
+export const avatarPath = p => typeof p==='string' && /^assets\/avatars\/[a-z0-9][a-z0-9-]{0,63}\.(?:jpg|png|svg)$/.test(p);
 export const crewSlug = name => String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
 // Who made a History event: the stored contributor id, else a crew alias match for events recorded before contributors existed.
 export function eventContributor(m,event){if(event.contributor)return event.contributor;const actor=String(event.actor||'').toLowerCase();return (m.crew?.members||[]).find(c=>[c.name,...(c.aliases||[])].some(a=>a&&actor===a.toLowerCase()))?.id??null;}
