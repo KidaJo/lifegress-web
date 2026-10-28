@@ -41,3 +41,4 @@ test('active load batches multi-file reads through GraphQL and falls back to per
  assert.ok(fast.calls.length<slow.calls.length);
 });
 test('GraphQL 401 is not swallowed by the fallback',async()=>{const store=new StoreV1('synthetic',async()=>({ok:false,status:401}));await assert.rejects(store.bulk(base,['a.md','b.md']),e=>e.status===401);});
+test('GitHub requests bypass the browser HTTP cache so post-publish verification sees the new head',async()=>{const seen=[];const s=new StoreV1('synthetic',async(url,opts)=>{seen.push(opts.cache);return {ok:true,json:async()=>({object:{sha:base}})};});await s.head();assert.deepEqual(seen,['no-store']);});

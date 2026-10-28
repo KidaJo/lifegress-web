@@ -104,3 +104,30 @@ body.has-drafts #page-scroll{padding-bottom:110px}body.modal-open #page-scroll{o
 #hq-manual .lf-focus{margin-bottom:8px}
 #hq-manual .lf-task-row{min-height:0;flex-direction:row;align-items:center;gap:16px;padding:16px 20px}
 #hq-manual .lf-task-row .hq-status{flex:none}
+
+/* Save status toast (replaces the draft bar). Colors follow the brand status pairs. */
+.lf-toast{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:10px;width:max-content;max-width:calc(100% - 32px);padding:10px 12px 10px 16px;border-radius:18px;box-shadow:0 8px 30px #214e3c22;font:14px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;background:var(--lf-info-bg);color:var(--lf-info)}
+.lf-toast[hidden]{display:none}
+.lf-toast.state-saving{padding:12px 18px}
+.lf-toast.state-saved{background:var(--lf-success-bg);color:var(--lf-success)}
+.lf-toast.state-error{background:var(--lf-error-bg);color:var(--lf-error)}
+.lf-toast .hq-action{font:inherit;min-height:40px;border:0;border-radius:24px;padding:8px 14px;background:var(--lf-card);color:var(--lf-action);white-space:nowrap;cursor:pointer}
+.lf-toast [data-action=retry]{background:var(--lf-action);color:#fff}
+.lf-spinner{width:16px;height:16px;flex:none;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:lf-spin .8s linear infinite}
+@keyframes lf-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.lf-spinner{animation-duration:2.4s}}
+
+/* Task rows: checkbox plus a button that opens the Task. */
+#hq-manual .lf-task-row{flex-direction:row;align-items:center;gap:4px;padding:6px 12px 6px 8px;min-height:0}
+#hq-manual .lf-check{flex:none;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:transparent;padding:0;cursor:pointer}
+#hq-manual .lf-check:hover{background:var(--lf-selected)}
+#hq-manual .lf-check img{width:22px;height:22px}
+#hq-manual .lf-task-open{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:0;background:transparent;padding:10px 8px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+#hq-manual .lf-task-row.is-done .hq-project-name{color:var(--lf-secondary);text-decoration:line-through;text-decoration-color:var(--lf-divider)}
+
+/* Login, loading and edit actions. */
+#hq-manual .lf-loading{display:flex;align-items:center;gap:12px;color:var(--lf-secondary);min-height:40vh}
+#hq-manual .lf-notice{background:var(--lf-info-bg);color:var(--lf-info);border-radius:12px;padding:12px 14px}
+#hq-manual button.lf-primary:not(:disabled),#hq-manual button[data-action=connect]:not(:disabled){background:var(--lf-action);color:#fff}
+#hq-manual button.lf-primary:not(:disabled):hover,#hq-manual button[data-action=connect]:not(:disabled):hover{background:var(--lf-hover)}
+#hq-manual button[data-action=connect]:disabled,#hq-manual button.lf-primary:disabled,#hq-manual .lf-edit-actions button:disabled{background:var(--lf-disabled);color:var(--lf-disabled-text);opacity:1;cursor:default}
