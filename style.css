@@ -508,3 +508,94 @@ html{touch-action:pan-x pan-y}
 /* Small helper text stays at 12px. */
 #hq-manual .hq-small{font-size:12px}
 #hq-manual .lf-card-top .hq-status{white-space:nowrap}
+
+/* V000.025 — editors visibly slide open (height + fade); with Reduce Motion they still fade in. */
+#hq-manual .lf-expand{display:grid;grid-template-rows:1fr;animation:lf-open .3s cubic-bezier(.2,.8,.2,1)}
+#hq-manual .lf-expand-inner{min-height:0;overflow:hidden}
+@keyframes lf-open{from{grid-template-rows:0fr;opacity:0;transform:translateY(-8px)}to{grid-template-rows:1fr;opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#hq-manual .lf-expand{animation:lf-fade .2s ease-out}}
+@keyframes lf-fade{from{opacity:0}to{opacity:1}}
+#hq-manual .lf-date-field{display:flex;align-items:center;gap:8px}
+#hq-manual .lf-date-field .lf-date-input{flex:1;min-width:0}
+#hq-manual .lf-date-clear{flex:none;min-height:44px;border:0;border-radius:22px;padding:8px 14px;background:transparent;color:var(--lf-action);font:inherit;font-size:14px;cursor:pointer}
+#hq-manual .lf-date-clear[hidden]{display:none}
+#hq-manual .lf-expand .hq-small{margin:8px 0 0}
+/* An empty date field shows a clear prompt instead of looking pre-filled. */
+#hq-manual .lf-date-input:invalid,#hq-manual .lf-date-input[value=""]{color:var(--lf-secondary)}
+
+/* Offline notice: information colors, stays until online. */
+.lf-toast.state-offline{background:var(--lf-info-bg);color:var(--lf-info)}
+.lf-icon-wifi-off{--lf-icon:url(./icons/wifi-off.svg)}
+
+/* Floating + (all widths): bottom-right; its menu opens upward with a short animation. */
+.lf-fab-wrap{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:40;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.lf-fab-wrap[hidden]{display:none}
+@media(min-width:1441px){.lf-fab-wrap{right:calc((100vw - 1440px)/2 + 24px)}}
+.lf-fab{display:grid;place-items:center;width:56px;height:56px;border:0;border-radius:50%;background:var(--lf-action);color:#fff;box-shadow:0 8px 24px #214e3c40;cursor:pointer;transition:transform .2s,background .2s;touch-action:manipulation}
+.lf-fab:hover{background:var(--lf-hover)}
+.lf-fab .lf-icon{width:26px;height:26px;transition:transform .2s}
+.lf-fab-wrap.is-open .lf-fab .lf-icon{transform:rotate(45deg)}
+.lf-fab-menu{min-width:240px;max-width:calc(100vw - 40px);padding:6px;background:var(--lf-card);border:1px solid var(--lf-divider);border-radius:16px;box-shadow:0 16px 40px #214e3c33;animation:lf-pop .18s cubic-bezier(.2,.8,.2,1);transform-origin:bottom right}
+.lf-fab-menu[hidden]{display:none}
+.lf-fab-menu button{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;border:0;border-radius:12px;padding:8px 12px;background:transparent;color:var(--lf-text);font:15px/1.3 -apple-system,BlinkMacSystemFont,sans-serif;text-align:left;cursor:pointer}
+.lf-fab-menu button:hover,.lf-fab-menu button:focus-visible{background:var(--lf-selected)}
+.lf-fab-menu .lf-icon{flex:none;width:18px;height:18px;color:var(--lf-action)}
+.lf-fab-menu span{display:flex;flex-direction:column;min-width:0}
+.lf-fab-menu small{font-size:12px;color:var(--lf-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes lf-pop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.lf-fab-menu{animation:lf-fade .15s ease-out}.lf-fab .lf-icon{transition:none}}
+/* Room for the floating button below the last card; on phones the toast sits left of it. */
+html body #page-scroll{padding-bottom:88px}
+@media(max-width:720px){.lf-toast{left:16px;transform:none;max-width:calc(100% - 108px)}}
+
+/* Quiet delete at the end of a Task page. */
+#hq-manual .lf-quiet-delete{margin:32px 0 0}
+#hq-manual .lf-quiet-delete button{min-height:40px;border:0;padding:8px 0;background:transparent;color:var(--lf-secondary);font:inherit;font-size:14px;cursor:pointer}
+#hq-manual .lf-quiet-delete button:hover{color:var(--lf-error)}
+#hq-manual .lf-empty{margin:24px 0 0}
+
+/* + menu motion: the menu grows from the button, items rise in one after another, the + turns into ×,
+   a light scrim dims the page; closing plays it in reverse. */
+.lf-fab-menu{animation:lf-fab-in .26s cubic-bezier(.2,.9,.25,1.15) both}
+.lf-fab-menu button{animation:lf-fab-item .3s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(var(--i,0) * 45ms + 40ms)}
+.lf-fab-wrap.is-closing .lf-fab-menu{animation:lf-fab-out .17s ease-in both}
+.lf-fab-wrap.is-closing .lf-fab-menu button{animation:none}
+.lf-fab .lf-icon{transition:transform .28s cubic-bezier(.2,.9,.25,1.3)}
+.lf-fab-wrap.is-open .lf-fab{background:var(--lf-hover);transform:scale(.94)}
+.lf-fab:active{transform:scale(.9)}
+.lf-fab-scrim{position:fixed;inset:0;z-index:-1;background:#1b2a23;opacity:0;pointer-events:none;transition:opacity .22s ease}
+.lf-fab-wrap.is-open .lf-fab-scrim{opacity:.18;pointer-events:auto}
+@keyframes lf-fab-in{from{opacity:0;transform:translateY(16px) scale(.85)}to{opacity:1;transform:none}}
+@keyframes lf-fab-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(10px) scale(.92)}}
+@keyframes lf-fab-item{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.lf-fab-menu,.lf-fab-menu button,.lf-fab-wrap.is-closing .lf-fab-menu{animation:lf-fade .15s ease-out both}.lf-fab .lf-icon,.lf-fab-scrim{transition:none}}
+.lf-fab-scrim{cursor:pointer;-webkit-tap-highlight-color:transparent}
+
+/* Version: bottom of the phone menu (left-aligned with the items) and bottom of the sidebar on wider screens.
+   The green footer bar is no longer shown at any width. */
+html body #page-scroll .hq-bottom{display:none}
+.lf-menu-version{text-align:left;margin:28px 0 8px;padding:0 14px}
+#hq-manual .lf-side-version{margin:12px 0 0;padding:0 12px;font-size:12px;color:var(--lf-secondary)}
+@media(max-width:720px){#hq-manual .lf-side-version{display:none}}
+@media(min-width:721px){html body #hq-manual aside{max-height:calc(100dvh - var(--lf-header-h,86px));overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box}}
+
+/* Sidebar on iPad / desktop: exactly the visible height; everything flows from the top and only the version sits at the bottom. */
+@media(min-width:721px){
+ html body #hq-manual aside{height:calc(100dvh - var(--lf-header-h,86px));max-height:none;display:flex;flex-direction:column}
+ #hq-manual .lf-side-version{margin-top:auto;padding:16px 12px 4px}
+}
+
+/* No light-green strip anywhere: the page behind the app is white; the page color shows only beside the app on very wide screens. */
+html,html body{background:var(--lf-card)}
+@media(min-width:1441px){html,html body{background:var(--lf-page)}}
+
+/* iPhone home indicator: keep the + button, toasts and the last card clear of it. */
+.lf-fab-wrap{bottom:calc(20px + env(safe-area-inset-bottom,0px));right:calc(20px + env(safe-area-inset-right,0px))}
+.lf-toast{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+@media(max-width:720px){.lf-toast{bottom:calc(24px + env(safe-area-inset-bottom,0px))}}
+html body #page-scroll{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+
+/* The room kept for the + button lives inside the content column, so the sidebar runs to the very bottom (no band under it). */
+html body #page-scroll{padding-bottom:0}
+html body #hq-manual main#content{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+html body #page-scroll .hq-bottom{display:none;border:0}

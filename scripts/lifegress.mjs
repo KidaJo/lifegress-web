@@ -14,6 +14,9 @@ const usage=`Commands:
   note <id> "<text>"                         Use "" to clear
   date <id> planned|completed <YYYY|YYYY-MM|YYYY-MM-DD|none>
   create <section|project|stage|task> "<title>" [--parent <id>]
+  move <id> --parent <id|none>              Move a record (and everything under it) to a new parent
+  archive <section-or-project-id>           Archive a workspace or project with its history
+  reorder <parent-id> <child-id>...         Put these children first, in this order (others keep their order after them)
   sync-contributors                          Rebuild every record's contributors from History (no History change)
   avatar <crew-id> <image.jpg|png|svg>       Set a crew member's photo (square, about 256×256, max 300 KB; no History change)
 Write options: --actor "Claude" (who records it) [--provider "ChatGPT" (who provided the information; credited in the app)] --source "evidence" [--occurred YYYY-MM-DD] [--dry-run]`;
@@ -30,6 +33,9 @@ export function operation(m,command,args,opts){
  if(command==='title'){need(2,'id and title');entity(args[0]);if(!args[1].trim())throw Error('Title cannot be empty.');return {kind:'edit',id:args[0],fields:{title:args[1].trim()}};}
  if(command==='note'){need(2,'id and note');entity(args[0]);return {kind:'edit',id:args[0],fields:{note:args[1]}};}
  if(command==='date'){need(3,'id, planned|completed and value');const e=entity(args[0]);const field={planned:'planned_completion',completed:'actual_completion'}[args[1]];if(!field)throw Error('Use planned or completed.');if(e.type==='section')throw Error('Sections have no dates.');return {kind:'edit',id:args[0],fields:{[field]:args[2]==='none'?'':args[2]}};}
+ if(command==='move'){need(1,'id');entity(args[0]);if(!('parent' in opts))throw Error('Use --parent <id> or --parent none.');const parent=opts.parent==='none'?null:opts.parent;if(parent)entity(parent);return {kind:'move',id:args[0],parent_id:parent};}
+ if(command==='archive'){need(1,'id');const e=entity(args[0]);if(!['section','project'].includes(e.type))throw Error('Only workspaces (sections) and projects can be archived.');return {kind:'archive',id:args[0]};}
+ if(command==='reorder'){need(2,'parent id and child ids');const e=entity(args[0]);const ids=args.slice(1),old=(e.children||[]).map(r=>r.id);const rest=old.filter(x=>!ids.includes(x));return {kind:'reorder',id:args[0],ids:[...ids,...rest]};}
  if(command==='create'){need(2,'type and title');const type=args[0];if(!['section','project','stage','task'].includes(type))throw Error('Unknown type: '+type);if(opts.parent)entity(opts.parent);return {kind:'create',type,id:type.toUpperCase()+'-'+crypto.randomUUID(),title:args[1].trim(),parent_id:opts.parent||null};}
  throw Error(`Unknown command: ${command}\n${usage}`);
 }

@@ -1,4 +1,4 @@
-import {GitHub} from './github.mjs?v=024';
+import {GitHub} from './github.mjs?v=025';
 import {decode,normalize,validate,transact,diff,dirname,safePath,avatarPath} from './data-v1.mjs';
 const repo='/repos/KidaJo/personal-hq';
 const read64=doc=>{if(doc.encoding!=='base64'||doc.size>2000000)throw Error('Unsupported Markdown file');return new TextDecoder().decode(Uint8Array.from(atob(doc.content.replace(/\s/g,'')),c=>c.charCodeAt(0)));};

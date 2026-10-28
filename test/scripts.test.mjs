@@ -74,3 +74,13 @@ test('--provider credits the AI that supplied the information and logs the recor
  assert.ok(decode(await readFile(join(dir,'crew.md'),'utf8')).members.some(c=>c.id==='gemini'&&c.kind==='ai'));
  assert.equal((await checkData(dir)).ok,true);
 }finally{await rm(dir,{recursive:true});}});
+
+test('writer moves and archives with History, keeping data valid',async()=>{const dir=await fixture();try{
+ const made=await main([dir,'create','section','Apps','--actor','Claude','--source','Owner chat'],quiet);
+ await main([dir,'move','P','--parent',made.op.id,'--actor','Claude','--source','Owner chat'],quiet);
+ let r=await checkData(dir);assert.equal(r.ok,true);
+ await main([dir,'archive','S','--actor','Claude','--source','Owner chat'],quiet);
+ r=await checkData(dir);assert.equal(r.ok,true);
+ const idx=decode(await readFile(join(dir,'index.md'),'utf8')).children.map(c=>c.id);assert.ok(!idx.includes('S'));assert.ok(idx.includes(made.op.id));
+ await assert.rejects(main([dir,'archive','T','--actor','A','--source','B'],quiet),/Only workspaces/);
+}finally{await rm(dir,{recursive:true});}});
