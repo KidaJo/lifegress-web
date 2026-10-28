@@ -4,6 +4,12 @@ export const allowed = {index:['section','task'],section:['project','task'],proj
 const clone = x => structuredClone(x);
 const fail = text => { throw Error(text); };
 export const dirname = path => path.slice(0,path.lastIndexOf('/'));
+// Crew: the Owner and AI collaborators (crew.md). Avatars are small JPEGs (uploads) or SVGs (default AI marks) in assets/avatars/.
+export const crewId = /^[a-z0-9][a-z0-9-]{0,39}$/;
+export const avatarPath = p => typeof p==='string' && /^assets\/avatars\/[a-z0-9][a-z0-9-]{0,63}\.(?:jpg|svg)$/.test(p);
+export const crewSlug = name => String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+// Who made a History event: the stored contributor id, else a crew alias match for events recorded before contributors existed.
+export function eventContributor(m,event){if(event.contributor)return event.contributor;const actor=String(event.actor||'').toLowerCase();return (m.crew?.members||[]).find(c=>[c.name,...(c.aliases||[])].some(a=>a&&actor===a.toLowerCase()))?.id??null;}
 export const safePath = p => typeof p==='string' && /^(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+\.md$/.test(p) && !p.split('/').some(s=>s==='.'||s==='..');
 export function dateValue(value){
  if(value==null||value==='')return null;
@@ -25,7 +31,8 @@ export function decode(text){
 export function normalize(files){
  const index=files['index.md']?decode(files['index.md']):{schema:1,children:[]};
  const catalog=files['archive/index.md']?decode(files['archive/index.md']):{schema:1,entries:[]};
- const model={index,catalog,entities:{},paths:{},files:{...files}};
+ const crew=files['crew.md']?decode(files['crew.md']):{schema:1,members:[]};
+ const model={index,catalog,crew,entities:{},paths:{},files:{...files}};
  for(const [path,text] of Object.entries(files)){
   if(path==='index.md'||path==='archive/index.md'||path.includes('/history/')||!/(?:section|project|stages|tasks)\.md$/.test(path))continue;
   for(const e of decode(text).records||[]){if(model.entities[e.id])fail('Duplicate ID: '+e.id);model.entities[e.id]=clone(e);model.paths[e.id]=path;}
@@ -46,7 +53,9 @@ export function counts(m,id){
  return {total,started,completed,loaded,progress:loaded&&total?completed/total*100:null,status:!loaded?null:completed===total&&total>0?'Completed':type==='project'?'In Progress':started?'In Progress':'Not Started'};
 }
 export function validate(m,{partial=false}={}){
- const owner=new Map();const rootArchives=new Set(m.catalog.entries.map(x=>x.id));if(rootArchives.size!==m.catalog.entries.length)fail('Duplicate archive ID');
+ const owner=new Map();
+ const crewIds=new Set();
+ for(const c of m.crew?.members||[]){if(!crewId.test(c?.id||'')||crewIds.has(c.id)||!c.name?.trim()||!['owner','ai'].includes(c.kind)||c.avatar!=null&&!avatarPath(c.avatar))fail('Invalid crew member '+(c?.id||''));crewIds.add(c.id);}const rootArchives=new Set(m.catalog.entries.map(x=>x.id));if(rootArchives.size!==m.catalog.entries.length)fail('Duplicate archive ID');
  const checkRefs=(parent,list)=>{
   if(!Array.isArray(list))fail('Missing ordered children');
   for(const r of list){if(!r||!safePath(r.path)||!allowed[parent==null?'index':m.entities[parent].type].includes(r.type))fail('Invalid child reference');if(owner.has(r.id))fail('Duplicate parent reference '+r.id);owner.set(r.id,parent);const e=m.entities[r.id];if(!e){if(partial)continue;fail('Missing child '+r.id);}if(e.type!==r.type||m.paths[e.id]!==r.path||(e.parent_id??null)!==parent)fail('Parent/path mismatch '+r.id);}
@@ -58,6 +67,7 @@ export function validate(m,{partial=false}={}){
   if(e.type==='task'){if(!statuses.includes(e.status)||e.children)fail('Invalid Task status/children');}
   else{if(Object.hasOwn(e,'status')||Object.hasOwn(e,'progress'))fail('Container state must be derived');checkRefs(e.id,e.children);}
   if(e.type==='section'&&(e.planned_completion!=null||e.actual_completion!=null))fail('Section cannot have completion dates');
+  if(e.contributors!=null&&(!Array.isArray(e.contributors)||new Set(e.contributors).size!==e.contributors.length||e.contributors.some(id=>!crewIds.has(id))))fail('Invalid contributors on '+e.id);
   dateValue(e.planned_completion);dateValue(e.actual_completion);
  }
  for(const e of Object.values(m.entities)){if(!owner.has(e.id)&&!rootArchives.has(e.id))fail('Unreferenced entity '+e.id);let id=e.id;const seen=new Set();while(id!=null&&m.entities[id]){if(seen.has(id))fail('Cycle');seen.add(id);id=m.entities[id].parent_id;}if(seen.size>4)fail('Maximum depth is four');}
@@ -84,7 +94,12 @@ function scope(m,id){let e=m.entities[id];while(e&&e.type!=='project'&&e.type!==
 function addEvent(m,id,type,change,ctx,scopeOverride){
  const path=`${scopeOverride??scope(m,id)}/history/${ctx.recorded_at.slice(0,4)}.md`;
  const doc=m.files[path]?decode(m.files[path]):{schema:1,events:[]};
- doc.events.push({event_id:ctx.uuid(),entity_id:id,event_type:type,occurred_at:dateValue(ctx.occurred_at),recorded_at:ctx.recorded_at,actor:ctx.actor,source:ctx.source,change});m.files[path]=encode(doc,'History');
+ doc.events.push({event_id:ctx.uuid(),entity_id:id,event_type:type,occurred_at:dateValue(ctx.occurred_at),recorded_at:ctx.recorded_at,actor:ctx.actor,source:ctx.source,...(ctx.contributor?{contributor:ctx.contributor}:{}),change});
+ // Derived completion is automatic, so it does not make the actor a contributor of the ancestor.
+ if(ctx.contributor&&type!=='derived-completion'){
+  if(!m.crew.members.some(c=>c.id===ctx.contributor)){m.crew.members.push({id:ctx.contributor,name:ctx.contributorName??(ctx.contributor==='owner'?'Owner':ctx.actor),kind:ctx.contributor==='owner'?'owner':'ai',avatar:null});m.files['crew.md']=encode(m.crew,'Crew');}
+  const e=m.entities[id];if(e&&!(e.contributors||[]).includes(ctx.contributor))e.contributors=[...(e.contributors||[]),ctx.contributor];
+ }m.files[path]=encode(doc,'History');
 }
 function rebuildRefs(m){for(const list of [m.index.children,...Object.values(m.entities).map(e=>e.children).filter(Boolean)])for(const r of list)if(m.entities[r.id])Object.assign(r,reference(m,r.id));}
 function moveDirectory(m,oldDir,newDir){
@@ -99,11 +114,18 @@ function detach(m,e){const list=refs(m,e.parent_id),i=list.findIndex(x=>x.id===e
 function recordPath(m,type,id,parent){const p=parent==null?null:m.entities[parent];if(type==='section')return `sections/${id}/section.md`;if(type==='project')return `${dirname(m.paths[parent])}/projects/${id}/project.md`;if(type==='stage')return `${dirname(m.paths[parent])}/stages.md`;let dir='standalone';if(p)dir=p.type==='stage'?dirname(m.paths[p.parent_id]):dirname(m.paths[parent]);return dir+'/tasks.md';}
 // Apply to a clone: a failed validation never mutates the caller's state.
 export function transact(input,operations,options={}){
- validate(input);const m=clone(input);const ctx={recorded_at:new Date().toISOString(),occurred_at:null,actor:'Owner via Lifegress',source:'Owner-reviewed edit',uuid:()=>crypto.randomUUID(),...options};
+ validate(input);const m=clone(input);const ctx={recorded_at:new Date().toISOString(),occurred_at:null,actor:'Owner via Lifegress',contributor:'owner',source:'Owner-reviewed edit',uuid:()=>crypto.randomUUID(),...options};
  if(!/^\d{4}-\d{2}-\d{2}T/.test(ctx.recorded_at)||!Number.isFinite(Date.parse(ctx.recorded_at)))fail('Invalid recording timestamp');
  for(const op of operations){
   const before={};for(const e of Object.values(m.entities))if(e.type!=='task')before[e.id]=counts(m,e.id).status;
   let e=m.entities[op.id];const eventCtx={...ctx,occurred_at:dateValue(op.occurred_at??ctx.occurred_at)};
+  // Profile and crew edits: name and avatar only; they do not touch records or History.
+  if(op.kind==='crew'){
+   const c=m.crew.members.find(x=>x.id===op.id);if(!c)fail('Unknown crew member '+op.id);
+   if(op.name!=null){if(!String(op.name).trim())fail('Name cannot be empty');c.name=String(op.name).trim();}
+   if(op.avatar!==undefined){if(op.avatar!==null&&!avatarPath(op.avatar))fail('Invalid avatar path');c.avatar=op.avatar;}
+   m.files['crew.md']=encode(m.crew,'Crew');continue;
+  }
   if(op.kind==='create'){
    if(e)fail('ID already exists');e={id:op.id,type:op.type,title:op.title,parent_id:op.parent_id??null,note:op.note||''};
    if(op.type==='task')e.status='Not Started';else e.children=[];

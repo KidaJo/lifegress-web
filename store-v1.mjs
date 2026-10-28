@@ -1,5 +1,5 @@
-import {GitHub} from './github.mjs?v=020';
-import {decode,normalize,validate,transact,diff,dirname,safePath} from './data-v1.mjs';
+import {GitHub} from './github.mjs?v=021';
+import {decode,normalize,validate,transact,diff,dirname,safePath,avatarPath} from './data-v1.mjs';
 const repo='/repos/KidaJo/personal-hq';
 const read64=doc=>{if(doc.encoding!=='base64'||doc.size>2000000)throw Error('Unsupported Markdown file');return new TextDecoder().decode(Uint8Array.from(atob(doc.content.replace(/\s/g,'')),c=>c.charCodeAt(0)));};
 export class StoreV1 extends GitHub {
@@ -11,8 +11,12 @@ export class StoreV1 extends GitHub {
   if(!this.pending.has(key))this.pending.set(key,(async()=>{try{const text=read64(await this.call(repo+'/contents/'+path+'?ref='+base));this.cache.set(key,text);return text;}catch(e){if(e.status===404&&optional){this.cache.set(key,null);return null;}throw e;}finally{this.pending.delete(key);}})());
   return this.pending.get(key);
  }
+ // Prefill the read cache from files saved on this device, so a start with an unchanged head needs one request.
+ seed(base,files){if(!/^[a-f0-9]{40}$/.test(base))return;for(const [path,text] of Object.entries(files))if(safePath(path))this.cache.set(base+':'+path,text);}
+ // Avatars are JPEG uploads or SVG default marks; the contents API returns them base64 encoded.
+ async avatar(base,path){if(!avatarPath(path))throw Error('Invalid avatar path');const doc=await this.call(repo+'/contents/'+path+'?ref='+base);return `data:image/${path.endsWith('.svg')?'svg+xml':'jpeg'};base64,`+String(doc.content||'').replace(/\s/g,'');}
  async tree(base){if(!this.treeCache.has(base)){const c=await this.call(repo+'/git/commits/'+base);const t=await this.call(repo+'/git/trees/'+c.tree.sha+'?recursive=1');if(t.truncated)throw Error('Truncated repository tree; no changes written');this.treeCache.set(base,{sha:c.tree.sha,entries:t.tree});}return this.treeCache.get(base);}
- async load(){const base=await this.head();const text=await this.read(base,'index.md',true);if(text===null)throw Error('This repository has not migrated to V1. Use the existing app until migration is verified.');const model=normalize({'index.md':text});return {base,model};}
+ async load(){const base=await this.head();const [text,crew]=await Promise.all([this.read(base,'index.md',true),this.read(base,'crew.md',true)]);if(text===null)throw Error('This repository has not migrated to V1. Use the existing app until migration is verified.');const model=normalize({'index.md':text,...(crew!=null?{'crew.md':crew}:{})});return {base,model};}
  async bulk(base,paths){
   // One GraphQL request per 50 files instead of one REST request per file. Any failure other than 401 falls back to per-file reads.
   const todo=paths.filter(p=>!this.cache.has(base+':'+p));
@@ -46,8 +50,10 @@ export class StoreV1 extends GitHub {
  }
  async commit(review){
   if(await this.head()!==review.base)throw Error('GitHub changed after comparison. Compare again.');
-  if(!review.changes.length||review.changes.some(c=>!safePath(c.path)))throw Error('Invalid changes');
-  const tree=await this.call(repo+'/git/trees','POST',{base_tree:review.tree,tree:review.changes.map(c=>({path:c.path,mode:'100644',type:'blob',...(c.after==null?{sha:null}:{content:c.after})}))});
+  const assets=review.assets||[];
+  if(!review.changes.length||review.changes.some(c=>!safePath(c.path))||assets.some(a=>!avatarPath(a.path)))throw Error('Invalid changes');
+  const binary=await Promise.all(assets.map(async a=>({path:a.path,mode:'100644',type:'blob',sha:a.base64==null?null:(await this.call(repo+'/git/blobs','POST',{content:a.base64,encoding:'base64'})).sha})));
+  const tree=await this.call(repo+'/git/trees','POST',{base_tree:review.tree,tree:[...review.changes.map(c=>({path:c.path,mode:'100644',type:'blob',...(c.after==null?{sha:null}:{content:c.after})})),...binary]});
   const commit=await this.call(repo+'/git/commits','POST',{message:'Update Lifegress V1 records',tree:tree.sha,parents:[review.base]});review.commit=commit.sha;
   await this.call(repo+'/git/refs/heads/main','PATCH',{sha:commit.sha,force:false});review.refUpdated=true;return this.verify(review);
  }

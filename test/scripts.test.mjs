@@ -31,6 +31,16 @@ test('AI writer records actor, source and partial completion date in History',as
  assert.equal(last.actor,'Claude Code');assert.equal(last.source,'Owner chat 2026-10-28');
 }finally{await rm(dir,{recursive:true});}});
 
+test('AI writes add the agent to My Crew and to the record contributors, consistent with History',async()=>{const dir=await fixture();try{
+ await main([dir,'note','T','From chat','--actor','Claude','--source','Owner chat'],quiet);
+ await main([dir,'status','T','In Progress','--actor','claude','--source','Owner chat'],quiet);
+ const crew=decode(await readFile(join(dir,'crew.md'),'utf8')).members;assert.deepEqual(crew.map(c=>c.id),['owner','claude']);
+ const task=decode(await readFile(join(dir,'sections/S/projects/P/tasks.md'),'utf8')).records.find(r=>r.id==='T');assert.deepEqual(task.contributors,['owner','claude']);
+ assert.equal((await checkData(dir)).ok,true);
+ const path=join(dir,'sections/S/projects/P/tasks.md');await writeFile(path,(await readFile(path,'utf8')).replace('"claude"\n','"codex"\n'));
+ assert.equal((await checkData(dir)).ok,false);
+}finally{await rm(dir,{recursive:true});}});
+
 test('AI writer refuses writes without provenance, invalid status, or container status; files stay unchanged',async()=>{const dir=await fixture();try{
  const before=await readFile(join(dir,'sections/S/projects/P/tasks.md'),'utf8');
  await assert.rejects(main([dir,'status','T','Completed'],quiet),/--actor and --source/);

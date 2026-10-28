@@ -174,3 +174,125 @@ body.has-drafts #page-scroll{padding-bottom:110px}body.modal-open #page-scroll{o
 #hq-manual .lf-context>p{color:var(--lf-secondary)}
 #hq-manual .lf-connect a{color:var(--lf-action)}
 @media(max-width:390px){#hq-manual .lf-segmented{display:flex}#hq-manual .lf-segmented button{flex:1;justify-content:center;padding:8px 6px;font-size:12px}#hq-manual .lf-date-label{width:90px}}
+
+/* V000.021 — no double-tap zoom on controls. */
+html{touch-action:manipulation}
+#hq-manual button,#workspace-dialog button,.lf-toast button{touch-action:manipulation}
+
+/* Status badges use masked icons in the badge color. */
+#hq-manual .hq-status{display:inline-flex;align-items:center;gap:6px}
+#hq-manual .hq-status .lf-icon{width:16px;height:16px}
+
+/* Task cards: white-filled checkbox in the text color; the whole card highlights on hover. */
+#hq-manual .lf-box{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#fff;color:var(--lf-text)}
+#hq-manual .lf-box .lf-icon{width:24px;height:24px}
+#hq-manual .lf-task-row.is-done .lf-box{color:var(--lf-secondary)}
+#hq-manual .lf-check:hover,#hq-manual .lf-task-open:hover{background:transparent}
+#hq-manual .lf-task-row{transition:background .15s}
+#hq-manual .lf-task-row:hover{background:var(--lf-selected)}
+
+/* Crew avatars. */
+.lf-avatar{display:inline-grid;place-items:center;flex:none;border-radius:50%;object-fit:cover;font-weight:600;color:#fff;line-height:1;overflow:hidden}
+.lf-avatar-sm{width:20px;height:20px;font-size:10px}
+.lf-avatar-md{width:32px;height:32px;font-size:14px}
+.lf-avatar-lg{width:72px;height:72px;font-size:28px}
+.lf-tone-0{background:var(--lf-action)}
+.lf-tone-1{background:var(--lf-info)}
+.lf-tone-2{background:var(--lf-warning)}
+.lf-tone-3{background:var(--lf-error)}
+.lf-tone-4{background:var(--lf-secondary)}
+#hq-manual .lf-crew{display:flex;align-items:center;gap:4px;margin-top:8px}
+#hq-manual .lf-crew-more{font-size:11px;color:var(--lf-secondary);margin-left:2px}
+#hq-manual .lf-crew-names{display:flex;flex-wrap:wrap;gap:8px 16px;margin:4px 0 12px}
+#hq-manual .lf-crew-name{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--lf-secondary)}
+
+/* Detail properties: dates and note share one row style. */
+#hq-manual .lf-props{margin:20px 0 8px;border-top:1px solid var(--lf-divider)}
+#hq-manual .lf-prop{display:flex;align-items:center;gap:12px;min-height:52px;padding:4px 0;border-bottom:1px solid var(--lf-divider)}
+#hq-manual .lf-prop-label{width:110px;flex:none;color:var(--lf-secondary);font-size:14px}
+#hq-manual .lf-prop-value{flex:1;min-width:0;display:flex;align-items:center}
+#hq-manual .lf-prop-note{align-items:flex-start;padding:14px 0}
+#hq-manual .lf-prop-note .lf-prop-label{padding-top:2px}
+#hq-manual .lf-prop-note .lf-prop-value{display:block}
+#hq-manual .lf-prop-note p{margin:0;white-space:pre-wrap}
+#hq-manual .lf-prop-note .lf-icon-button{margin:-12px 0}
+#hq-manual .lf-prop textarea{display:block;width:100%;min-height:120px;resize:vertical;border:1px solid var(--lf-input);border-radius:12px;padding:12px 14px;background:var(--lf-card);color:var(--lf-text);font:inherit}
+#hq-manual .lf-prop-add .lf-add,#hq-manual .lf-prop-add .lf-date-value{margin:0;color:var(--lf-action);font-size:14px}
+
+/* Page and list headers with small add buttons on the right. */
+#hq-manual .lf-page-head,#hq-manual .lf-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#hq-manual .lf-list-head{margin:28px 0 12px}
+#hq-manual .lf-list-head h3{margin:0}
+#hq-manual .lf-head-actions{display:flex;gap:8px}
+#hq-manual .lf-add-chip{display:inline-flex;align-items:center;gap:4px;min-height:36px;border:0;border-radius:18px;padding:6px 12px;background:var(--lf-selected);color:var(--lf-action);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+#hq-manual .lf-add-chip:hover{background:var(--lf-divider)}
+#hq-manual .lf-add-chip .lf-icon{width:14px;height:14px}
+
+/* Profile and My Crew. */
+#hq-manual .lf-profile{display:flex;align-items:center;gap:20px;margin:16px 0 8px}
+#hq-manual .lf-profile-info{flex:1;min-width:0}
+#hq-manual .lf-profile-info h3{margin:0}
+#hq-manual .lf-crew-row{flex-direction:row;align-items:center;gap:14px;min-height:0;padding:14px 16px}
+#hq-manual .lf-crew-row .lf-add{margin:0;flex:none;font-size:13px}
+#workspace-dialog .lf-menu-profile{display:flex;align-items:center;gap:10px}
+
+/* Spacing system (8-point scale): 8 inside a group, 12 between a header and its content,
+   24 between blocks, 32 before a new list section. One style for every section title. */
+#hq-manual .lf-back{margin:0 0 4px}
+#hq-manual .lf-title-row h2{margin:0}
+#hq-manual .lf-title-row{margin:0 0 8px}
+#hq-manual .lf-crew-names{margin:0 0 12px}
+#hq-manual .lf-segmented{margin:0}
+#hq-manual .lf-props,#hq-manual .lf-context{margin:24px 0 0}
+#hq-manual .lf-context>p{margin:0 0 8px}
+#hq-manual .lf-list-head{margin:32px 0 12px;min-height:32px}
+#hq-manual .lf-page-head{margin:0 0 24px}
+#hq-manual .lf-page-head h2{margin:0}
+#hq-manual .lf-focus{margin:0 0 32px}
+#hq-manual .lf-focus>h3,#hq-manual .lf-context>h3,#hq-manual .lf-list-head h3,#hq-manual .lf-page-head~h3{font-size:18px;font-weight:600;letter-spacing:-.2px;line-height:1.3;margin:0 0 12px}
+#hq-manual .lf-list-head h3{margin:0}
+#hq-manual .lf-add-chip{min-height:32px;padding:6px 12px 6px 10px}
+#hq-manual .project-meta{margin:24px 0}
+
+/* Profile header: photo left; name with its pencil, then the photo action, centered beside it. */
+#hq-manual .lf-profile{display:flex;align-items:center;gap:16px;margin:8px 0 32px}
+#hq-manual .lf-profile-info{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+#hq-manual .lf-name-row{display:flex;align-items:center;gap:2px;margin-left:0}
+#hq-manual .lf-name-row h3{margin:0;font-size:22px;font-weight:600;letter-spacing:-.3px}
+#hq-manual .lf-name-row .lf-icon-button{width:36px;height:36px}
+#hq-manual .lf-profile-info .lf-add{margin:0;min-height:32px;font-size:14px}
+#hq-manual .lf-profile-info .lf-title-input{font-size:20px;padding:8px 12px}
+#hq-manual .lf-profile-info .lf-edit-actions{margin-top:8px}
+#hq-manual .lf-profile + .lf-list-head{margin-top:0}
+
+/* Title actions: ⋯ opens a small menu anchored to the right of the title. */
+.lf-icon-ellipsis{--lf-icon:url(./icons/ellipsis.svg)}
+#hq-manual .lf-actions{position:relative;flex:none}
+#hq-manual .lf-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:200px;padding:6px;background:var(--lf-card);border:1px solid var(--lf-divider);border-radius:14px;box-shadow:0 12px 32px #214e3c26}
+#hq-manual .lf-menu[hidden]{display:none}
+#hq-manual .lf-menu button{display:block;width:100%;min-height:44px;border:0;border-radius:10px;padding:10px 12px;background:transparent;color:var(--lf-text);font:inherit;font-size:15px;text-align:left;cursor:pointer}
+#hq-manual .lf-menu button:hover,#hq-manual .lf-menu button:focus-visible{background:var(--lf-selected)}
+#hq-manual .lf-menu hr{border:0;border-top:1px solid var(--lf-divider);margin:6px 4px}
+#hq-manual .lf-menu .lf-danger{color:var(--lf-error)}
+#hq-manual .lf-menu .lf-danger:hover{background:var(--lf-error-bg)}
+#hq-manual #manage-content:not(:empty){margin:16px 0 0;padding:16px;border-radius:14px;background:var(--lf-page)}
+
+/* History: a collapsed block at the end of the page. */
+#hq-manual .lf-history{margin:32px 0 24px;border-top:1px solid var(--lf-divider);padding-top:12px}
+#hq-manual .lf-history summary{min-height:44px;display:flex;align-items:center;font-size:15px;font-weight:600;color:var(--lf-secondary);cursor:pointer}
+#hq-manual .lf-history article{padding:12px 0;border-bottom:1px solid var(--lf-divider)}
+#hq-manual .lf-record-id{margin-top:12px}
+
+/* Move picker: indented workspace tree; the chosen row uses the selected surface. */
+#hq-manual #manage-content h3{font-size:18px;font-weight:600;margin:0 0 12px}
+#hq-manual .lf-tree{display:flex;flex-direction:column;gap:2px;max-height:50vh;overflow:auto;margin:0 0 16px}
+#hq-manual .lf-tree-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;border:0;border-radius:10px;padding:8px 12px;background:transparent;color:var(--lf-text);font:inherit;font-size:15px;text-align:left;cursor:pointer}
+#hq-manual .lf-tree-row:hover:not(:disabled){background:var(--lf-card)}
+#hq-manual .lf-tree-row[aria-pressed=true]{background:var(--lf-selected);color:var(--lf-action);font-weight:600}
+#hq-manual .lf-tree-row:disabled{color:var(--lf-disabled-text);cursor:default}
+#hq-manual .lf-depth-1{padding-left:32px}
+#hq-manual .lf-depth-2{padding-left:52px}
+#hq-manual .lf-depth-3{padding-left:72px}
+
+/* Properties block: dividers between rows and below the last one, none above the first. */
+#hq-manual .lf-props{border-top:0}
