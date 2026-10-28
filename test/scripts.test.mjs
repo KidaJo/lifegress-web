@@ -65,3 +65,12 @@ test('avatar command stores a crew photo, replaces the old one and rejects unsaf
  const bad=join(dir,'bad.svg');await writeFile(bad,'<svg onload="alert(1)"></svg>');await assert.rejects(main([dir,'avatar','owner',bad],quiet),/scripts/);
  await assert.rejects(main([dir,'avatar','ghost',png],quiet),/Unknown crew/);
 }finally{await rm(dir,{recursive:true});}});
+
+test('--provider credits the AI that supplied the information and logs the recording agent',async()=>{const dir=await fixture();try{
+ await main([dir,'status','T','Completed','--actor','Claude','--provider','Gemini','--source','Gemini chat: launch plan','--occurred','2026-10'],quiet);
+ const task=decode(await readFile(join(dir,'sections/S/projects/P/tasks.md'),'utf8')).records.find(r=>r.id==='T');assert.deepEqual(task.contributors,['owner','gemini']);
+ const ev=decode(await readFile(join(dir,'sections/S/projects/P/history/2026.md'),'utf8')).events.at(-1);
+ assert.equal(ev.contributor,'gemini');assert.equal(ev.recorded_by,'Claude');assert.equal(ev.actor,'Gemini (recorded by Claude)');
+ assert.ok(decode(await readFile(join(dir,'crew.md'),'utf8')).members.some(c=>c.id==='gemini'&&c.kind==='ai'));
+ assert.equal((await checkData(dir)).ok,true);
+}finally{await rm(dir,{recursive:true});}});

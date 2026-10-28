@@ -365,3 +365,13 @@ html body #page-scroll .hq-bottom{flex:none}
 @media(min-width:1441px){html body #hq-manual{border-left:1px solid var(--lf-divider);border-right:1px solid var(--lf-divider)}}
 /* Messages now show as toasts; the old status line stays for screen readers only, so it adds no gap under the footer. */
 html body #hq-message{position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* With a photo, the initials circle underneath is fully hidden, so no tone color shows at the photo's round edge. */
+.lf-avatar.has-photo{background:transparent;color:transparent}
+
+/* Header profile (iPad / desktop): just the photo, at the far right of the header. Phones use the ☰ menu. */
+#hq-manual .lf-header-profile{display:none}
+@media(min-width:721px){
+ #hq-manual .lf-header-profile:not([hidden]){display:grid;place-items:center;margin-left:auto;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer}
+ #hq-manual .lf-header-profile:hover .lf-avatar,#hq-manual .lf-header-profile[aria-pressed=true] .lf-avatar{box-shadow:0 0 0 2px var(--lf-card),0 0 0 4px var(--lf-action)}
+ #hq-manual .lf-header-profile:focus-visible{outline:2px solid var(--lf-focus);outline-offset:2px}
+}

@@ -16,7 +16,7 @@ const usage=`Commands:
   create <section|project|stage|task> "<title>" [--parent <id>]
   sync-contributors                          Rebuild every record's contributors from History (no History change)
   avatar <crew-id> <image.jpg|png|svg>       Set a crew member's photo (square, about 256×256, max 300 KB; no History change)
-Write options: --actor "Claude" (crew name; new names join My Crew) --source "evidence" [--occurred YYYY-MM-DD] [--dry-run]`;
+Write options: --actor "Claude" (who records it) [--provider "ChatGPT" (who provided the information; credited in the app)] --source "evidence" [--occurred YYYY-MM-DD] [--dry-run]`;
 
 function parse(argv){const args=[],opts={};for(let i=0;i<argv.length;i++){const a=argv[i];if(a==='--dry-run')opts.dryRun=true;else if(a.startsWith('--')){if(i+1>=argv.length)throw Error(`${a} needs a value`);opts[a.slice(2)]=argv[++i];}else args.push(a);}return {args,opts};}
 
@@ -54,10 +54,14 @@ export async function main(argv,log=console.log){
   log(`${opts.dryRun?'Dry run — would set':'Set'} ${c.name}'s photo to ${path}${c.avatar?` (replacing ${c.avatar})`:''}.`);return {changes,path};}
  if(!opts.actor||!opts.source)throw Error('Writes require --actor and --source so History records who changed what and why.');
  const op=operation(model,command,rest,opts);
- // --actor names a crew member (id, name or alias); a new name joins My Crew automatically.
- const wanted=opts.actor.trim().toLowerCase(),member=model.crew.members.find(c=>[c.id,c.name,...(c.aliases||[])].some(a=>a&&a.toLowerCase()===wanted));
- const contributor=member?.id??crewSlug(opts.actor);if(!contributor)throw Error('--actor must contain letters or digits.');if(contributor==='owner'&&!member)throw Error('Use the Owner\'s crew name for owner edits.');
- const after=transact(model,[op],{actor:member?.name??opts.actor.trim(),contributor,contributorName:opts.actor.trim(),source:opts.source,occurred_at:opts.occurred??null});validate(after);
+ // The contributor shown in the app is whoever provided the information: --provider when an agent records it for someone
+ // else (for example ChatGPT's report), otherwise --actor. Names match crew id, name or alias; a new name joins My Crew.
+ const find=name=>{const wanted=name.trim().toLowerCase();return model.crew.members.find(c=>[c.id,c.name,...(c.aliases||[])].some(a=>a&&a.toLowerCase()===wanted));};
+ const credited=(opts.provider??opts.actor).trim(),member=find(credited);
+ const contributor=member?.id??crewSlug(credited);if(!contributor)throw Error('--actor / --provider must contain letters or digits.');if(contributor==='owner'&&!member)throw Error('Use the Owner\'s crew name for owner edits.');
+ const recorder=find(opts.actor)?.name??opts.actor.trim(),name=member?.name??credited;
+ const recordedBy=opts.provider&&recorder.toLowerCase()!==name.toLowerCase()?recorder:null;
+ const after=transact(model,[op],{actor:recordedBy?`${name} (recorded by ${recorder})`:name,contributor,contributorName:credited,recordedBy,source:opts.source,occurred_at:opts.occurred??null});validate(after);
  const changes=diff(model.files,after.files);
  if(!changes.length){log('No changes: the record already has this value.');return {changes};}
  if(!opts.dryRun)for(const c of changes){const p=join(data.dir,c.path);if(c.after==null)await unlink(p);else{await mkdir(dirname(p),{recursive:true});await writeFile(p,c.after);}}

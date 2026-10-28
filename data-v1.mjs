@@ -94,7 +94,7 @@ function scope(m,id){let e=m.entities[id];while(e&&e.type!=='project'&&e.type!==
 function addEvent(m,id,type,change,ctx,scopeOverride){
  const path=`${scopeOverride??scope(m,id)}/history/${ctx.recorded_at.slice(0,4)}.md`;
  const doc=m.files[path]?decode(m.files[path]):{schema:1,events:[]};
- doc.events.push({event_id:ctx.uuid(),entity_id:id,event_type:type,occurred_at:dateValue(ctx.occurred_at),recorded_at:ctx.recorded_at,actor:ctx.actor,source:ctx.source,...(ctx.contributor?{contributor:ctx.contributor}:{}),change});
+ doc.events.push({event_id:ctx.uuid(),entity_id:id,event_type:type,occurred_at:dateValue(ctx.occurred_at),recorded_at:ctx.recorded_at,actor:ctx.actor,source:ctx.source,...(ctx.contributor?{contributor:ctx.contributor}:{}),...(ctx.recordedBy?{recorded_by:ctx.recordedBy}:{}),change});
  // Derived completion is automatic, so it does not make the actor a contributor of the ancestor.
  if(ctx.contributor&&type!=='derived-completion'){
   if(!m.crew.members.some(c=>c.id===ctx.contributor)){m.crew.members.push({id:ctx.contributor,name:ctx.contributorName??(ctx.contributor==='owner'?'Owner':ctx.actor),kind:ctx.contributor==='owner'?'owner':'ai',avatar:null});m.files['crew.md']=encode(m.crew,'Crew');}

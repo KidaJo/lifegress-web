@@ -1,11 +1,12 @@
 import {credentialStore} from './credentials.mjs';
-import {StoreV1} from './store-v1.mjs?v=022';
+import {StoreV1} from './store-v1.mjs?v=023';
 import {allowed,statuses,counts,transact,subtree,archived,decode,normalize,validate} from './data-v1.mjs';
 let storage;try{storage=localStorage;}catch{}
 // App version: V<major>.<release>. Increment the release part by one on every publication (see AGENTS.md).
-const APP_VERSION='V000.022';
+const APP_VERSION='V000.023';
 const credentials=credentialStore(storage),draftKey='lifegress:KidaJo/personal-hq:operations:v1',cacheKey='lifegress:KidaJo/personal-hq:cache:v1',avatarKey='lifegress:KidaJo/personal-hq:avatars:v1';
 const $=s=>document.querySelector(s),content=$('#content'),nav=$('#desktop-workspaces nav');
+$('#version').textContent=APP_VERSION;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const button=(action,label,data='')=>`<button class="hq-action" data-action="${action}" ${data}>${label}</button>`;
 const structural=o=>['archive','restore','move','delete'].includes(o.kind);
@@ -33,8 +34,8 @@ function toast(state,undo,text){clearTimeout(toastTimer);const t=$('#toast');if(
  if(state==='notice')toastTimer=setTimeout(()=>toast(null),6000);
  undoAction=undo||null;}
 function closeMenu(){const d=$('#workspace-dialog');d.classList.remove('menu-expanded');$('#workspace-toggle').setAttribute('aria-expanded','false');setTimeout(()=>d.close(),matchMedia('(prefers-reduced-motion: reduce)').matches?0:240);}
-function loading(){content.innerHTML='<div class="lf-connect lf-loading"><span class="lf-spinner" aria-hidden="true"></span><p>Loading your workspace…</p></div>';nav.innerHTML='';$('#workspace-toggle').hidden=true;$('#version').textContent=APP_VERSION;}
-function loggedOut(message=''){content.innerHTML=`<div class="lf-connect"><p class="lf-eyebrow">YOUR PERSONAL WORKSPACE</p><h2>Your projects.<br>Your progress.</h2>${message?`<p class="lf-notice">${esc(message)}</p>`:''}<label class="hq-field">Access token<input id="token" type="password" autocomplete="off"></label><p class="hq-small">A GitHub access token that can read and update your private Lifegress data. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create a token</a></p>${personalDevice?'':`<label class="lf-remember"><input id="remember" type="checkbox" ${remember?'checked':''}>Remember on this device</label>`}<p class="hq-small" id="connect-help">Enter your access token to continue.</p><button class="hq-action" data-action="connect" aria-describedby="connect-help" disabled>Connect to Lifegress</button></div>`;nav.innerHTML='';$('#workspace-toggle').hidden=true;$('#version').textContent=APP_VERSION;toast(null);}
+function loading(){content.innerHTML='<div class="lf-connect lf-loading"><span class="lf-spinner" aria-hidden="true"></span><p>Loading your workspace…</p></div>';nav.innerHTML='';$('#workspace-toggle').hidden=$('#header-profile').hidden=true;$('#version').textContent=APP_VERSION;}
+function loggedOut(message=''){content.innerHTML=`<div class="lf-connect"><p class="lf-eyebrow">YOUR PERSONAL WORKSPACE</p><h2>Your projects.<br>Your progress.</h2>${message?`<p class="lf-notice">${esc(message)}</p>`:''}<label class="hq-field">Access token<input id="token" type="password" autocomplete="off"></label><p class="hq-small">A GitHub access token that can read and update your private Lifegress data. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create a token</a></p>${personalDevice?'':`<label class="lf-remember"><input id="remember" type="checkbox" ${remember?'checked':''}>Remember on this device</label>`}<p class="hq-small" id="connect-help">Enter your access token to continue.</p><button class="hq-action" data-action="connect" aria-describedby="connect-help" disabled>Connect to Lifegress</button></div>`;nav.innerHTML='';$('#workspace-toggle').hidden=$('#header-profile').hidden=true;$('#version').textContent=APP_VERSION;toast(null);}
 function expired(message='Your access has expired. Enter a new token to continue.'){credentials.forget();clearCache();store=null;model=view=null;$('#workspace-dialog').close();loggedOut(message);}
 async function run(fn){if(busy)return;busy=true;$('#hq-manual').setAttribute('aria-busy','true');try{await fn();}catch(e){if(e.status===401)expired();else say(e.message);}finally{busy=false;$('#hq-manual').setAttribute('aria-busy','false');}}
 const icon=name=>`<span class="lf-icon lf-icon-${name}" aria-hidden="true"></span>`;
@@ -46,8 +47,8 @@ function summary(id){const c=counts(view,id);return c.loaded&&c.total?`${c.compl
 // Crew: avatars (uploaded photo, else an initial on a brand tone) and the people who worked on a record and everything under it.
 const member=id=>view?.crew?.members.find(c=>c.id===id);
 // Initials are the fallback: shown until a photo has loaded, and kept if the photo fails (for example on a poor connection).
-function avatar(id,size='sm'){const c=member(id),name=c?.name||id,src=c?.avatar&&avatars[c.avatar];const i=view?.crew?.members.findIndex(c=>c.id===id)??-1,tone=(i<0?[...id].reduce((a,ch)=>a+ch.charCodeAt(0),0):i)%5;return `<span class="lf-avatar lf-avatar-${size} lf-tone-${tone}" role="img" aria-label="${esc(name)}">${esc(name.trim().charAt(0).toUpperCase()||'?')}${src?`<img src="${src}" alt="">`:''}</span>`;}
-document.addEventListener('error',e=>{if(e.target.matches?.('.lf-avatar img'))e.target.remove();},true);
+function avatar(id,size='sm'){const c=member(id),name=c?.name||id,src=c?.avatar&&avatars[c.avatar];const i=view?.crew?.members.findIndex(c=>c.id===id)??-1,tone=(i<0?[...id].reduce((a,ch)=>a+ch.charCodeAt(0),0):i)%5;return `<span class="lf-avatar lf-avatar-${size} lf-tone-${tone}${src?' has-photo':''}" role="img" aria-label="${esc(name)}">${esc(name.trim().charAt(0).toUpperCase()||'?')}${src?`<img src="${src}" alt="">`:''}</span>`;}
+document.addEventListener('error',e=>{if(e.target.matches?.('.lf-avatar img')){e.target.parentElement.classList.remove('has-photo');e.target.remove();}},true);
 function people(id){const out=[];const visit=key=>{const e=view.entities[key];if(!e)return;for(const c of e.contributors||[])if(!out.includes(c))out.push(c);for(const r of e.children||[])visit(r.id);};visit(id);return out;}
 function crewRow(id){const list=people(id);return list.length?`<span class="lf-crew">${list.slice(0,5).map(c=>avatar(c)).join('')}${list.length>5?`<span class="lf-crew-more">+${list.length-5}</span>`:''}</span>`:'';}
 function crewNames(id){const list=people(id);return list.length?`<div class="lf-crew-names">${list.map(c=>`<span class="lf-crew-name">${avatar(c)}<span>${esc(member(c)?.name||c)}</span></span>`).join('')}</div>`:'';}
@@ -108,7 +109,9 @@ function profile(){const me=member('owner')||{id:'owner',name:'Owner'},count=id=
  return `<h2>Profile</h2><section class="lf-profile">${avatar('owner','lg')}<div class="lf-profile-info">${name}${photoButton('owner',me.avatar?'Change photo':'Add photo')}</div></section><div class="lf-list-head"><h3>My Crew</h3></div><p class="hq-small">AI collaborators join automatically when they first update your data. Their names and photos are fixed.</p><div class="hq-list">${crew||'<p class="hq-small">No collaborators yet.</p>'}</div>`;}
 function render(){
  if(!store||!view)return;$('#workspace-toggle').hidden=false;
- const me=member('owner');$('#menu-profile').innerHTML=$('#side-profile').innerHTML=`${avatar('owner','md')}<span>${esc(me?.name||'Profile')}</span>`;$('#side-profile').setAttribute('aria-pressed',String(profileView));
+ const me=member('owner');$('#menu-profile').innerHTML=`${avatar('owner','md')}<span>${esc(me?.name||'Profile')}</span>`;
+ // iPad / desktop: the Owner's photo alone sits at the right of the header and opens Profile.
+ const hp=$('#header-profile');hp.hidden=false;hp.innerHTML=avatar('owner','md');hp.setAttribute('aria-label',`Profile · ${me?.name||'Owner'}`);hp.setAttribute('aria-pressed',String(profileView));
  let activeSection=view.entities[selected];while(activeSection&&activeSection.type!=='section')activeSection=view.entities[activeSection.parent_id];
  const sections=view.index.children.filter(r=>r.type==='section'),home=!selected&&!profileView&&!archiveView;
  // Navigation tree: "All projects" is the root and opens the home page; workspaces are indented under it; Archive stays apart.
