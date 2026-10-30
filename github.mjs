@@ -1,5 +1,5 @@
 import {projectPath,parseProject,applyEdit} from './model.mjs';
-const repo='/repos/KidaJo/personal-hq';
+const repo='/repos/KidaJo/lifegress-hq';
 export class GitHub {
   constructor(token, transport=(...args)=>globalThis.fetch(...args)){this.token=token;this.transport=transport;}
   async call(path,method='GET',body){

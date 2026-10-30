@@ -1,5 +1,5 @@
-// Validates a local personal-hq checkout with the same rules the app uses before every save.
-// Usage: node scripts/check-data.mjs <path-to-personal-hq>
+// Validates a local lifegress-hq checkout with the same rules the app uses before every save.
+// Usage: node scripts/check-data.mjs <path-to-lifegress-hq>
 import {readFile,readdir} from 'node:fs/promises';
 import {join,relative,resolve,sep} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -41,7 +41,7 @@ export async function checkData(dir){
 
 if(import.meta.url===pathToFileURL(process.argv[1]||'').href){
  const dir=process.argv[2];
- if(!dir){console.error('Usage: node scripts/check-data.mjs <path-to-personal-hq>');process.exit(2);}
+ if(!dir){console.error('Usage: node scripts/check-data.mjs <path-to-lifegress-hq>');process.exit(2);}
  const result=await checkData(dir);
  if(result.ok)console.log(`Lifegress data check passed: ${result.files} files, ${result.entities} records.`);
  else{console.error('Lifegress data check failed:');for(const e of result.errors)console.error('- '+e);process.exit(1);}

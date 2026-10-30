@@ -1,9 +1,10 @@
 import {credentialStore} from './credentials.mjs';
-import {StoreV1} from './store-v1.mjs?v=027';
+import {StoreV1} from './store-v1.mjs?v=028';
 import {allowed,statuses,counts,transact,subtree,archived,decode,normalize,validate,eventContributor} from './data-v1.mjs';
 let storage;try{storage=localStorage;}catch{}
 // App version: V<major>.<release>. Increment the release part by one on every publication (see AGENTS.md).
-const APP_VERSION='V000.027';
+const APP_VERSION='V000.028';
+// Storage keys keep the repository's former name (personal-hq) so saved sign-ins, unsent edits and caches survive the rename.
 const credentials=credentialStore(storage),draftKey='lifegress:KidaJo/personal-hq:operations:v1',cacheKey='lifegress:KidaJo/personal-hq:cache:v1',avatarKey='lifegress:KidaJo/personal-hq:avatars:v1';
 const $=s=>document.querySelector(s),content=$('#content'),nav=$('#desktop-workspaces nav');
 $('#version').textContent=$('#menu-version').textContent=$('#side-version').textContent=APP_VERSION;
@@ -137,7 +138,7 @@ function childGroups(refs,types,editable,collapse=''){const empty=!refs.some(r=>
  // Reorder lives on the group header; in reorder mode the same cards stay in place, checkboxes give way to drag handles.
  const head=sorting?`<div class="lf-head-actions"><button class="lf-head-link" data-action="reorder-cancel">Cancel</button><button class="lf-add-chip lf-primary-chip" data-action="reorder-done">Done</button></div>`:editable&&open.length>1&&!reorderState?`<button class="lf-head-link" data-action="reorder" data-type="${type}">Reorder</button>`:'';
  const list=sorting?reorderState.order.map(id=>`<div class="lf-reorder-item" data-id="${esc(id)}">${row({id})}<button class="lf-grip" data-id="${esc(id)}" aria-label="Move ${esc(view.entities[id].title)} (drag, or use arrow keys)" title="Drag to reorder">${icon('grip-vertical')}</button></div>`).join('')+closed.map(r=>`<div class="lf-reorder-fixed">${row(r)}</div>`).join(''):[...open,...closed].map(row).join('');
- if(collapse){const key=`${collapse}-${type}`;if(sorting)collapsedGroups.delete(key);return groupHead(key,groupTitle[type],items.length,head)+groupBody(key,list,sorting?' lf-reordering':'');}
+ if(collapse){const key=`${collapse}-${type}`;if(sorting)collapsedGroups.delete(key);return `<section class="lf-group">${groupHead(key,groupTitle[type],items.length,head)+groupBody(key,list,sorting?' lf-reordering':'')}</section>`;}
  return `<div class="lf-list-head"><h3>${groupTitle[type]}</h3>${head}</div><div class="hq-list${sorting?' lf-reordering':''}">${list}</div>`;}).join('');}
 const isDone=id=>{const x=view.entities[id];return x?.type==='task'?x.status==='Completed':counts(view,id).status==='Completed';};
 function showResults(){const box=$('#search-results');if(!box)return;box.innerHTML=searchResults(searchText);highlight(box,searchText.trim());$('#search-clear').hidden=!searchText;}
@@ -196,6 +197,9 @@ $('#search-clear').onclick=()=>{searchText='';$('#search-input').value='';showRe
 $('#search-cancel').onclick=exitSearch;
 // Reorder state: which group is being sorted and its unfinished items in their new order. Done saves once; Cancel discards.
 let reorderState=null,drag=null;
+// Group headers stick to the top while their group scrolls past; a soft fade below appears only while stuck.
+const scroller=$('#page-scroll');let stickFrame=0;
+scroller.addEventListener('scroll',()=>{if(stickFrame)return;stickFrame=requestAnimationFrame(()=>{stickFrame=0;const top=scroller.getBoundingClientRect().top;for(const h of content.querySelectorAll('.lf-collapsible'))h.classList.toggle('is-stuck',h.getBoundingClientRect().top<=top+1&&h.parentElement.getBoundingClientRect().bottom>top+h.offsetHeight);});},{passive:true});
 // Touch screens: hover styles are for mice. iOS keeps :hover on the last tapped element, which looks like a stuck
 // selection, so hover rules are dropped on devices that cannot hover.
 if(matchMedia('(hover: none)').matches){const strip=list=>{for(let i=list.length-1;i>=0;i--){const r=list[i];if(r.cssRules&&!r.selectorText)strip(r.cssRules);else if(r.selectorText?.includes(':hover')){const keep=r.selectorText.split(',').filter(s=>!s.includes(':hover'));if(keep.length)r.selectorText=keep.join(',');else (r.parentRule||r.parentStyleSheet).deleteRule(i);}}};for(const s of document.styleSheets){try{strip(s.cssRules);}catch{}}}
@@ -237,7 +241,7 @@ function render(){
  if(profileView)content.innerHTML=profile();
  else if(archiveView){content.innerHTML=`<h2>Archive</h2><p class="hq-small">Archived items are kept with their history and don't count toward progress.</p><div class="hq-list">${view.catalog.entries.map(a=>`<div class="hq-project lf-card lf-archived"><span class="hq-project-info"><span class="hq-project-name">${esc(a.title||a.id)}</span><span class="hq-small">${esc(a.type[0].toUpperCase()+a.type.slice(1))}</span></span><span class="lf-head-actions"><button class="lf-add-chip" data-action="restore" data-id="${esc(a.id)}">Restore</button><button class="lf-add-chip lf-danger-chip" data-action="delete" data-id="${esc(a.id)}">Delete</button></span></div>`).join('')||'<p class="hq-small">Nothing archived.</p>'}</div><div id="manage-content"></div>`;return;}
  // Home keeps the Now / Up next list it opened with, so a Task checked here stays visible until the next visit.
- else if(!e){homeList??=focus();const pick=ids=>ids.map(id=>view.entities[id]).filter(x=>x&&!archived(view,x.id));const group=(key,title,list)=>list.length?`<section class="lf-focus">${groupHead(key,title,list.length)}${groupBody(key,list.map(x=>taskRow(x)).join(''))}</section>`:'';content.innerHTML=`<div class="lf-page-head"><h2>All projects</h2></div>${group('home-now','Now',pick(homeList.now))}${group('home-next','Up next',pick(homeList.next))}${childGroups(view.index.children,['section','task'],true,'home')}`;}
+ else if(!e){homeList??=focus();const pick=ids=>ids.map(id=>view.entities[id]).filter(x=>x&&!archived(view,x.id));const group=(key,title,list)=>list.length?`<section class="lf-focus">${groupHead(key,title,list.length)}${groupBody(key,list.map(x=>taskRow(x)).join(''),' lf-rail')}</section>`:'';content.innerHTML=`<div class="lf-page-head"><h2>All projects</h2></div>${group('home-now','Now',pick(homeList.now))}${group('home-next','Up next',pick(homeList.next))}${childGroups(view.index.children,['section','task'],true,'home')}`}
  else content.innerHTML=detail(e);
  const input=content.querySelector('[data-edit]:not(button):not([type=date])');if(input){input.focus({preventScroll:true});if(input.tagName==='INPUT'&&input.type==='text')input.select();}
 }
@@ -334,7 +338,7 @@ document.addEventListener('click',event=>{if(!event.target.closest('.lf-actions'
  if(a==='cancel-move'){content.querySelector('#manage-content').innerHTML='';}
  if(a==='apply-move')run(()=>apply({kind:'move',id,parent_id:b.dataset.dest||null}));
  if(a==='reorder'){const type=b.dataset.type;reorderState={type,order:kidsOf().map(r=>r.id).filter(x=>view.entities[x]?.type===type&&!isDone(x))};render();}
- if(a==='toggle-group'){const key=b.dataset.group,closed=!collapsedGroups.has(key);closed?collapsedGroups.add(key):collapsedGroups.delete(key);try{storage.setItem('lifegress:collapsed-groups:v1',JSON.stringify([...collapsedGroups]));}catch{}const head=content.querySelector(`[data-group-head="${key}"]`);head?.classList.toggle('is-folded',closed);head?.querySelectorAll('.lf-group-toggle').forEach(x=>x.setAttribute('aria-expanded',String(!closed)));const body=content.querySelector(`[data-group-body="${key}"]`);if(body){body.classList.toggle('is-collapsed',closed);body.classList.toggle('is-animating',!closed);body.ontransitionend=e=>{if(e.target===body&&e.propertyName==='grid-template-rows')body.classList.remove('is-animating');};}}
+ if(a==='toggle-group'){const key=b.dataset.group,closed=!collapsedGroups.has(key);closed?collapsedGroups.add(key):collapsedGroups.delete(key);try{storage.setItem('lifegress:collapsed-groups:v1',JSON.stringify([...collapsedGroups]));}catch{}const head=content.querySelector(`[data-group-head="${key}"]`);head?.classList.toggle('is-folded',closed);head?.querySelectorAll('.lf-group-toggle').forEach(x=>x.setAttribute('aria-expanded',String(!closed)));const body=content.querySelector(`[data-group-body="${key}"]`);if(body){body.classList.toggle('is-collapsed',closed);body.classList.toggle('is-animating',!closed);body.ontransitionend=e=>{if(e.target===body&&e.propertyName==='grid-template-rows'){body.classList.remove('is-animating');}};}}
  if(a==='reorder-cancel')finishReorder(false);
  if(a==='reorder-done')finishReorder(true);
  if(a==='discard')run(async()=>{ops=[];locked=0;assets=[];save();toast(null);await load();});

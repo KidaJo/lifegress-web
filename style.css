@@ -719,3 +719,41 @@ html{-webkit-tap-highlight-color:transparent}
 #hq-manual .lf-group-body{transition:grid-template-rows .32s cubic-bezier(.2,.8,.2,1),opacity .2s ease-out}
 #hq-manual .lf-group-body.is-collapsed{transition:grid-template-rows .28s cubic-bezier(.4,0,.2,1),opacity .14s ease}
 @media(prefers-reduced-motion:reduce){#hq-manual .lf-group-body,#hq-manual .lf-group-body.is-collapsed,#hq-manual .lf-group-body>.hq-list{transition:none}}
+
+/* V000.028: cards align to the top (checkbox, title, status); sticky group headers; Now and Up next as horizontal rails. */
+#hq-manual .lf-task-row,#hq-manual .lf-task-open{align-items:flex-start}
+#hq-manual .lf-task-open>.hq-status{align-self:flex-start;margin-top:2px}
+#hq-manual .lf-task-open>.lf-crew{align-self:flex-start}
+
+/* Sticky headers: each group's header stays at the top while its group passes, on the page's own background.
+   While stuck, the bar widens to the page edges and a short fade softens the cards sliding under it. */
+#hq-manual .lf-list-head.lf-collapsible{position:sticky;top:0;z-index:4}
+#hq-manual .lf-list-head.lf-collapsible::after{content:'';position:absolute;left:0;right:0;top:100%;height:18px;background:linear-gradient(var(--lf-card),rgba(255,255,255,0));opacity:0;transition:opacity .18s;pointer-events:none}
+#hq-manual .lf-list-head.lf-collapsible.is-stuck{background:var(--lf-card);border-radius:0}
+#hq-manual .lf-list-head.lf-collapsible.is-stuck:hover{background:var(--lf-page)}
+#hq-manual .lf-list-head.lf-collapsible.is-stuck:has(.lf-group-extra:hover){background:var(--lf-card)}
+#hq-manual .lf-list-head.lf-collapsible.is-stuck::after{opacity:1}
+@media(max-width:650px){#hq-manual .lf-list-head.lf-collapsible.is-stuck{margin-left:-20px;margin-right:-20px;padding-left:20px;padding-right:16px}}
+
+/* Rails: on phones, a horizontal snapping grid filled column by column, one card wide with the next peeking, three rows.
+   Wider screens show every card at once in a two- or three-column grid. Cards share one fixed height. */
+#hq-manual .lf-rail{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-template-rows:repeat(3,auto);grid-auto-columns:calc(100% - 24px);gap:12px;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none;margin:0 -20px;scroll-padding:0 20px}
+#hq-manual .lf-group-body>.hq-list.lf-rail{padding-left:20px;padding-right:20px}
+#hq-manual .lf-rail::-webkit-scrollbar{display:none}
+#hq-manual .lf-rail:not(:has(>:nth-child(3))){grid-template-rows:repeat(2,auto)}
+#hq-manual .lf-rail:not(:has(>:nth-child(2))){grid-template-rows:auto}
+#hq-manual .lf-group-body:not(.is-collapsed):not(.is-animating)>.lf-rail{overflow-x:auto;overflow-y:hidden}
+#hq-manual .lf-rail>.hq-project{scroll-snap-align:start;height:128px;overflow:hidden}
+#hq-manual .lf-rail .hq-project-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#hq-manual .lf-rail .lf-meta{min-width:0;flex-wrap:nowrap;overflow:hidden}
+#hq-manual .lf-rail .lf-meta .hq-small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#hq-manual .lf-rail .lf-task-open>.hq-status{display:none}
+@media(min-width:651px){
+ #hq-manual .lf-group-body>.hq-list.lf-rail{margin:0;padding-left:0;padding-right:0;grid-auto-flow:row;grid-template-rows:none;grid-template-columns:repeat(2,minmax(0,1fr));scroll-snap-type:none}
+ #hq-manual .lf-group-body:not(.is-collapsed):not(.is-animating)>.hq-list.lf-rail{overflow:visible}
+}
+@media(min-width:1100px){#hq-manual .lf-group-body>.hq-list.lf-rail{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){#hq-manual .lf-list-head.lf-collapsible::after{transition:none}}
+/* Contributors on detail pages: each photo sits close to its name, with clearly wider space between people. */
+#hq-manual .lf-crew-names{gap:8px 22px}
+#hq-manual .lf-crew-name{gap:5px}

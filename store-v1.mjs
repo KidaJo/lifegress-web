@@ -1,6 +1,6 @@
-import {GitHub} from './github.mjs?v=027';
+import {GitHub} from './github.mjs?v=028';
 import {decode,normalize,validate,transact,diff,dirname,safePath,avatarPath} from './data-v1.mjs';
-const repo='/repos/KidaJo/personal-hq';
+const repo='/repos/KidaJo/lifegress-hq';
 const read64=doc=>{if(doc.encoding!=='base64'||doc.size>2000000)throw Error('Unsupported Markdown file');return new TextDecoder().decode(Uint8Array.from(atob(doc.content.replace(/\s/g,'')),c=>c.charCodeAt(0)));};
 export class StoreV1 extends GitHub {
  constructor(token,transport){super(token,transport);this.requests=0;this.cache=new Map();this.pending=new Map();this.treeCache=new Map();}
@@ -21,7 +21,7 @@ export class StoreV1 extends GitHub {
   // One GraphQL request per 50 files instead of one REST request per file. Any failure other than 401 falls back to per-file reads.
   const todo=paths.filter(p=>!this.cache.has(base+':'+p));
   for(let i=0;i<todo.length;i+=50){const chunk=todo.slice(i,i+50);const vars={},decl=[],fields=[];chunk.forEach((p,n)=>{if(!safePath(p))throw Error('Invalid path/version');vars['e'+n]=base+':'+p;decl.push('$e'+n+':String!');fields.push('f'+n+':object(expression:$e'+n+'){...on Blob{text isTruncated}}');});
-   let r;try{r=await this.call('/graphql','POST',{query:'query('+decl.join(',')+'){repository(owner:"KidaJo",name:"personal-hq"){'+fields.join(' ')+'}}',variables:vars});}catch(e){if(e.status===401)throw e;return false;}
+   let r;try{r=await this.call('/graphql','POST',{query:'query('+decl.join(',')+'){repository(owner:"KidaJo",name:"lifegress-hq"){'+fields.join(' ')+'}}',variables:vars});}catch(e){if(e.status===401)throw e;return false;}
    const repository=r?.data?.repository;if(!repository||r.errors)return false;
    for(let n=0;n<chunk.length;n++){const blob=repository['f'+n];if(blob&&(blob.isTruncated||typeof blob.text!=='string'))return false;}
    chunk.forEach((p,n)=>this.cache.set(base+':'+p,repository['f'+n]?.text??null));}

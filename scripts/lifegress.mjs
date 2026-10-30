@@ -1,6 +1,6 @@
 // Command-line writer for AI agents. Changes go through the same transaction and validation as the app,
 // so history, derived completion and references stay consistent. Never hand-edit V1 record files.
-// Usage: node scripts/lifegress.mjs <path-to-personal-hq> <command> [args] [--actor NAME --source TEXT] [--occurred DATE] [--dry-run]
+// Usage: node scripts/lifegress.mjs <path-to-lifegress-hq> <command> [args] [--actor NAME --source TEXT] [--occurred DATE] [--dry-run]
 import {writeFile,mkdir,unlink,readFile} from 'node:fs/promises';
 import {join,dirname,extname} from 'node:path';
 import {pathToFileURL} from 'node:url';
