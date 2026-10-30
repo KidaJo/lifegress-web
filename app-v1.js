@@ -1,9 +1,9 @@
 import {credentialStore} from './credentials.mjs';
-import {StoreV1} from './store-v1.mjs?v=028';
+import {StoreV1} from './store-v1.mjs?v=029';
 import {allowed,statuses,counts,transact,subtree,archived,decode,normalize,validate,eventContributor} from './data-v1.mjs';
 let storage;try{storage=localStorage;}catch{}
 // App version: V<major>.<release>. Increment the release part by one on every publication (see AGENTS.md).
-const APP_VERSION='V000.028';
+const APP_VERSION='V000.029',build=new URL(import.meta.url).searchParams.get('v'),updatedKey='lifegress:updated-to:v1',versionOf=v=>APP_VERSION.replace(/\d+$/,v);
 // Storage keys keep the repository's former name (personal-hq) so saved sign-ins, unsent edits and caches survive the rename.
 const credentials=credentialStore(storage),draftKey='lifegress:KidaJo/personal-hq:operations:v1',cacheKey='lifegress:KidaJo/personal-hq:cache:v1',avatarKey='lifegress:KidaJo/personal-hq:avatars:v1';
 const $=s=>document.querySelector(s),content=$('#content'),nav=$('#desktop-workspaces nav');
@@ -36,7 +36,7 @@ function toast(state,undo,text){clearTimeout(toastTimer);const t=$('#toast');if(
  undoAction=undo||null;}
 function closeMenu(){const d=$('#workspace-dialog');d.classList.remove('menu-expanded');$('#workspace-toggle').setAttribute('aria-expanded','false');setTimeout(()=>d.close(),matchMedia('(prefers-reduced-motion: reduce)').matches?0:240);}
 // Loading shows the centered splash (logo, slogan, status) over the whole app until the workspace or login screen is ready.
-const splash=show=>{$('#splash').hidden=!show;};
+const splash=show=>{$('#splash').hidden=!show;if(!show)updatedNote();};
 function loading(){splash(true);content.innerHTML='';nav.innerHTML='';$('#workspace-toggle').hidden=$('#header-profile').hidden=$('#header-search').hidden=true;$('#version').textContent=APP_VERSION;}
 function loggedOut(message=''){splash(false);searchView=false;$('.hq-top').classList.remove('is-searching');$('#search-bar').hidden=true;$('#fab').hidden=true;content.innerHTML=`<div class="lf-connect"><p class="lf-eyebrow">YOUR PERSONAL WORKSPACE</p><h2>Your projects.<br>Your progress.</h2>${message?`<p class="lf-notice">${esc(message)}</p>`:''}<label class="hq-field">Access token<input id="token" type="password" autocomplete="off"></label><p class="hq-small">A GitHub access token that can read and update your private Lifegress data. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create a token</a></p>${personalDevice?'':`<label class="lf-remember"><input id="remember" type="checkbox" ${remember?'checked':''}>Remember on this device</label>`}<p class="hq-small" id="connect-help">Enter your access token to continue.</p><button class="hq-action" data-action="connect" aria-describedby="connect-help" disabled>Connect to Lifegress</button></div>`;nav.innerHTML='';$('#workspace-toggle').hidden=$('#header-profile').hidden=$('#header-search').hidden=true;$('#version').textContent=APP_VERSION;toast(null);}
 function expired(message='Your access has expired. Enter a new token to continue.'){credentials.forget();clearCache();store=null;model=view=null;$('#workspace-dialog').close();loggedOut(message);}
@@ -197,6 +197,14 @@ $('#search-clear').onclick=()=>{searchText='';$('#search-input').value='';showRe
 $('#search-cancel').onclick=exitSearch;
 // Reorder state: which group is being sorted and its unfinished items in their new order. Done saves once; Cancel discards.
 let reorderState=null,drag=null;
+// Phone rails show which page is in view: a row of dots, or "3 / 9" when there are many pages. Hidden for a single page.
+function railDots(){for(const list of content.querySelectorAll('.lf-rail')){const box=list.parentElement.nextElementSibling;if(!box?.classList.contains('lf-rail-dots'))continue;
+ const lefts=[...new Set([...list.children].map(x=>x.offsetLeft))],pages=lefts.length,step=(lefts[1]-lefts[0])||1,end=list.scrollLeft>=list.scrollWidth-list.clientWidth-2;
+ const page=end?pages-1:Math.min(pages-1,Math.round(list.scrollLeft/step));box.hidden=pages<2||list.scrollWidth<=list.clientWidth;if(box.hidden)continue;
+ if(pages>7){box.innerHTML=`<span class="lf-rail-count">${page+1} / ${pages}</span>`;continue;}
+ if(box.children.length!==pages)box.innerHTML='<span></span>'.repeat(pages);[...box.children].forEach((d,i)=>d.classList.toggle('is-active',i===page));}}
+let dotsFrame=0;content.addEventListener('scroll',e=>{if(!e.target.classList?.contains('lf-rail')||dotsFrame)return;dotsFrame=requestAnimationFrame(()=>{dotsFrame=0;railDots();});},{capture:true,passive:true});
+addEventListener('resize',railDots);
 // Group headers stick to the top while their group scrolls past; a soft fade below appears only while stuck.
 const scroller=$('#page-scroll');let stickFrame=0;
 scroller.addEventListener('scroll',()=>{if(stickFrame)return;stickFrame=requestAnimationFrame(()=>{stickFrame=0;const top=scroller.getBoundingClientRect().top;for(const h of content.querySelectorAll('.lf-collapsible'))h.classList.toggle('is-stuck',h.getBoundingClientRect().top<=top+1&&h.parentElement.getBoundingClientRect().bottom>top+h.offsetHeight);});},{passive:true});
@@ -241,7 +249,7 @@ function render(){
  if(profileView)content.innerHTML=profile();
  else if(archiveView){content.innerHTML=`<h2>Archive</h2><p class="hq-small">Archived items are kept with their history and don't count toward progress.</p><div class="hq-list">${view.catalog.entries.map(a=>`<div class="hq-project lf-card lf-archived"><span class="hq-project-info"><span class="hq-project-name">${esc(a.title||a.id)}</span><span class="hq-small">${esc(a.type[0].toUpperCase()+a.type.slice(1))}</span></span><span class="lf-head-actions"><button class="lf-add-chip" data-action="restore" data-id="${esc(a.id)}">Restore</button><button class="lf-add-chip lf-danger-chip" data-action="delete" data-id="${esc(a.id)}">Delete</button></span></div>`).join('')||'<p class="hq-small">Nothing archived.</p>'}</div><div id="manage-content"></div>`;return;}
  // Home keeps the Now / Up next list it opened with, so a Task checked here stays visible until the next visit.
- else if(!e){homeList??=focus();const pick=ids=>ids.map(id=>view.entities[id]).filter(x=>x&&!archived(view,x.id));const group=(key,title,list)=>list.length?`<section class="lf-focus">${groupHead(key,title,list.length)}${groupBody(key,list.map(x=>taskRow(x)).join(''),' lf-rail')}</section>`:'';content.innerHTML=`<div class="lf-page-head"><h2>All projects</h2></div>${group('home-now','Now',pick(homeList.now))}${group('home-next','Up next',pick(homeList.next))}${childGroups(view.index.children,['section','task'],true,'home')}`}
+ else if(!e){homeList??=focus();const pick=ids=>ids.map(id=>view.entities[id]).filter(x=>x&&!archived(view,x.id));const group=(key,title,list)=>list.length?`<section class="lf-focus">${groupHead(key,title,list.length)}${groupBody(key,list.map(x=>taskRow(x)).join(''),' lf-rail')}<div class="lf-rail-dots" aria-hidden="true" hidden></div></section>`:'';content.innerHTML=`<div class="lf-page-head"><h2>All projects</h2></div>${group('home-now','Now',pick(homeList.now))}${group('home-next','Up next',pick(homeList.next))}${childGroups(view.index.children,['section','task'],true,'home')}`;requestAnimationFrame(railDots);}
  else content.innerHTML=detail(e);
  const input=content.querySelector('[data-edit]:not(button):not([type=date])');if(input){input.focus({preventScroll:true});if(input.tagName==='INPUT'&&input.type==='text')input.select();}
 }
@@ -338,7 +346,7 @@ document.addEventListener('click',event=>{if(!event.target.closest('.lf-actions'
  if(a==='cancel-move'){content.querySelector('#manage-content').innerHTML='';}
  if(a==='apply-move')run(()=>apply({kind:'move',id,parent_id:b.dataset.dest||null}));
  if(a==='reorder'){const type=b.dataset.type;reorderState={type,order:kidsOf().map(r=>r.id).filter(x=>view.entities[x]?.type===type&&!isDone(x))};render();}
- if(a==='toggle-group'){const key=b.dataset.group,closed=!collapsedGroups.has(key);closed?collapsedGroups.add(key):collapsedGroups.delete(key);try{storage.setItem('lifegress:collapsed-groups:v1',JSON.stringify([...collapsedGroups]));}catch{}const head=content.querySelector(`[data-group-head="${key}"]`);head?.classList.toggle('is-folded',closed);head?.querySelectorAll('.lf-group-toggle').forEach(x=>x.setAttribute('aria-expanded',String(!closed)));const body=content.querySelector(`[data-group-body="${key}"]`);if(body){body.classList.toggle('is-collapsed',closed);body.classList.toggle('is-animating',!closed);body.ontransitionend=e=>{if(e.target===body&&e.propertyName==='grid-template-rows'){body.classList.remove('is-animating');}};}}
+ if(a==='toggle-group'){const key=b.dataset.group,closed=!collapsedGroups.has(key);closed?collapsedGroups.add(key):collapsedGroups.delete(key);try{storage.setItem('lifegress:collapsed-groups:v1',JSON.stringify([...collapsedGroups]));}catch{}const head=content.querySelector(`[data-group-head="${key}"]`);head?.classList.toggle('is-folded',closed);head?.querySelectorAll('.lf-group-toggle').forEach(x=>x.setAttribute('aria-expanded',String(!closed)));const body=content.querySelector(`[data-group-body="${key}"]`);if(body){body.classList.toggle('is-collapsed',closed);body.classList.toggle('is-animating',!closed);body.ontransitionend=e=>{if(e.target===body&&e.propertyName==='grid-template-rows'){body.classList.remove('is-animating');railDots();}};}}
  if(a==='reorder-cancel')finishReorder(false);
  if(a==='reorder-done')finishReorder(true);
  if(a==='discard')run(async()=>{ops=[];locked=0;assets=[];save();toast(null);await load();});
@@ -354,7 +362,17 @@ $('#home').onclick=()=>{if(busy)return;selected=null;archiveView=profileView=sea
 $('#workspace-toggle').onclick=()=>{if(busy)return;const d=$('#workspace-dialog');d.showModal();document.activeElement?.blur();$('#workspace-toggle').setAttribute('aria-expanded','true');requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('menu-expanded')));};
 $('#close-workspaces').onclick=closeMenu;$('#workspace-dialog').addEventListener('cancel',e=>{e.preventDefault();closeMenu();});
 // The phone menu and the iPad / desktop sidebar share these actions.
-for(const id of ['refresh','side-refresh'])$('#'+id).onclick=()=>run(async()=>{closeMenu();await load();});
+// Refresh also updates the app itself: it reads the published page's build number (?v=) and, when it differs,
+// reloads past the browser's page cache. Unsaved typing is never thrown away; saved edits are kept on the device.
+async function latestBuild(){try{const r=await fetch('./index.html',{cache:'no-store'});return (await r.text()).match(/app-v1\.js\?v=(\w+)/)?.[1]||null;}catch{return null;}}
+function updatedNote(){let v=null;try{v=storage.getItem(updatedKey);storage.removeItem(updatedKey);}catch{}if(v&&v===build)toast('saved',null,`Updated to ${APP_VERSION}`);}
+for(const id of ['refresh','side-refresh'])$('#'+id).onclick=()=>run(async()=>{closeMenu();
+ if(editing||document.querySelector('dialog[open]:not(#workspace-dialog)')){toast('notice',null,'Save or cancel your edit first.');return;}
+ toast('saving',null,'Checking for updates…');const v=await latestBuild();
+ if(v&&build&&v!==build){const label=`Updating to ${versionOf(v)}…`;toast('saving',null,label);if(syncing)await syncing;
+  try{storage.setItem(updatedKey,v);}catch{}await Promise.all(['./','./index.html'].map(u=>fetch(u,{cache:'reload'}).catch(()=>{})));
+  toast(null);$('.lf-splash-status span:last-child').textContent=label;splash(true);location.reload();return;}
+ toast('saving',null,'Downloading the latest data…');await load();toast('saved',null,`Up to date · ${APP_VERSION}`);});
 for(const id of ['forget','logout','side-forget','side-logout'])$('#'+id).onclick=()=>{if(busy)return;credentials.forget();clearCache();store=null;model=view=null;remember=false;closeMenu();loggedOut('This device no longer remembers your access.');};
 // Remembered devices show the last saved workspace at once, then refresh from GitHub in the background.
 const savedToken=credentials.read();
